@@ -23,7 +23,7 @@ public:
 
   void updateFromContext(ZTestContext &context) {
     std::lock_guard<std::mutex> lock(_mutex);
-    for (auto &result : context.getResults()) {
+    for (auto &[name, result] : context.getAllResults()) {
       auto it = std::find_if(
           _test_cases.begin(), _test_cases.end(),
           [&](const auto &t) { return t._name == result.getName(); });
@@ -60,69 +60,132 @@ class ZTestController {
 public:
   ZTestController(ZTestModel &model, ZTestContext &context)
       : _model(model), _context(context) {}
-
+  ~ZTestController() {
+    if (_test_thread.joinable()) {
+      _test_thread.join();
+    }
+  }
   void runAllTests() {
-    // Use atomic check instead of raw boolean
-    if (!_model.tryStartRunning())
+    if (!_model.tryStartRunning()) {
+      std::cout << "[INFO] Another test is already running." << std::endl;
       return;
+    }
+
+    if (_test_thread.joinable()) {
+      _test_thread.join();
+    }
+
     _test_thread = std::thread([this] {
       try {
-        _context.runAll();
-      } catch (...) {
-        // Ensure state cleanup
-        std::lock_guard<std::mutex> lock(_model._mutex);
-        _model._is_running = false;
-        throw;
-      }
-      {
-        std::lock_guard<std::mutex> lock(_model._mutex);
-        _model._is_running = false;
-        _model._progress = 1.0f; // Ensure progress completion
-      }
-    });
-    _test_thread.join();
-  }
-
-  void runSelectedTest(const std::string &test_name) {
-    if (!_model.tryStartRunning())
-      return;
-
-    _test_thread = std::thread([this, test_name] {
-      try {
-        auto tests = _context.getTests();
-        // Add progress tracking
-        float total = tests.size();
-        float completed = 0;
-        std::cout << total << std::endl;
-
-        for (auto &test : tests) {
-          if (test && test->getName() == test_name) {
-            _context.runTest(std::move(test));
-            {
-              std::lock_guard<std::mutex> lock(_model._mutex);
-              _model._progress = ++completed / total;
-            }
-            break;
-          }
+        // 1️⃣ 单线程运行 z_unsafe 测试
+        {
+          std::lock_guard<std::mutex> lock(_model._mutex);
+          std::cout << "[THREAD] Running unsafe tests..." << std::endl;
+          _context.runUnsafeOnly(); // 新增方法，单线程执行
         }
+
+        // 2️⃣ 多线程运行 z_safe 测试
+        {
+          std::lock_guard<std::mutex> lock(_model._mutex);
+          std::cout << "[THREAD] Running safe tests in parallel..."
+                    << std::endl;
+          _context.resetQueue();        // 重置队列
+          _context.runSafeInParallel(); // 使用线程池
+        }
+
       } catch (...) {
-        std::lock_guard<std::mutex> lock(_model._mutex);
-        _model._is_running = false;
+        std::cerr << "[THREAD] Exception caught during test execution."
+                  << std::endl;
         throw;
       }
+
       {
         std::lock_guard<std::mutex> lock(_model._mutex);
         _model._is_running = false;
         _model._progress = 1.0f;
       }
+
+      std::cout << "[THREAD] All tests completed." << std::endl;
     });
-    _test_thread.join();
+
+    _test_thread.detach(); // 或 join()
+  }
+
+  void runSelectedTest(const std::string &test_name) {
+    if (!_model.tryStartRunning()) {
+      std::cout << "[INFO] Another test is already running." << std::endl;
+      return;
+    }
+
+    if (_test_thread.joinable()) {
+      std::cout << "[INFO] Joining previous thread..." << std::endl;
+      _test_thread.join();
+    }
+
+    std::cout << "[INFO] Starting new thread for test: " << test_name
+              << std::endl;
+    _test_thread = std::thread([this, test_name] {
+      bool found = false;
+      try {
+        auto tests = _context.getTestList();
+        std::cout << "[THREAD] Total tests: " << tests.size() << std::endl;
+
+        for (auto &weak_test : tests) {
+          if (auto test = weak_test.lock()) {
+            std::cout << "[THREAD] Checking test: " << test->getName()
+                      << std::endl;
+            if (test->getName() == test_name) {
+              std::cout << "[THREAD] Running test: " << test_name << std::endl;
+              _context.runTest(test);
+
+              {
+                std::lock_guard<std::mutex> lock(_model._mutex);
+                _model._progress = 1.0f;
+              }
+
+              found = true;
+              break;
+            }
+          }
+        }
+
+        if (!found) {
+          std::cout << "[THREAD] Test not found: " << test_name << std::endl;
+        }
+
+      } catch (const std::exception &e) {
+        std::cerr << "[THREAD] Exception caught: " << e.what() << std::endl;
+        {
+          std::lock_guard<std::mutex> lock(_model._mutex);
+          _model._is_running = false;
+          _model._progress = 0.0f;
+        }
+        throw;
+      } catch (...) {
+        std::cerr << "[THREAD] Unknown exception caught." << std::endl;
+        {
+          std::lock_guard<std::mutex> lock(_model._mutex);
+          _model._is_running = false;
+          _model._progress = 0.0f;
+        }
+        throw;
+      }
+
+      {
+        std::lock_guard<std::mutex> lock(_model._mutex);
+        _model._is_running = false;
+        _model._progress = 0.0f;
+      }
+
+      std::cout << "[THREAD] Thread function completed." << std::endl;
+    });
   }
 
 private:
   ZTestModel &_model;
   ZTestContext &_context;
   std::thread _test_thread;
+  bool isRunning() const { return _model._is_running.load(); }
 };
 
 class ZTestView {
@@ -147,59 +210,74 @@ private:
       ImGui::EndMainMenuBar();
     }
   }
-
   void renderTestList(ZTestModel &model, ZTestController &controller) {
     ImGui::Begin("Test Cases", nullptr, ImGuiWindowFlags_MenuBar);
 
-    if (ImGui::Button("Run All")) {
+    // Control buttons
+    if (ImGui::Button("Run All"))
       controller.runAllTests();
-    }
-
     ImGui::SameLine();
-    if (ImGui::Button("Run Selected")) {
-      if (!model._selected_test.empty()) {
-
-        controller.runSelectedTest(model._selected_test);
-      }
+    if (ImGui::Button("Run Selected") && !model._selected_test.empty()) {
+      controller.runSelectedTest(model._selected_test);
     }
-
-    ImGui::Separator();
-
-    ImGui::Columns(3, "testColumns");
-    ImGui::Text("Test Name");
-    ImGui::NextColumn();
-    ImGui::Text("Status");
-    ImGui::NextColumn();
-    ImGui::Text("Duration (ms)");
-    ImGui::NextColumn();
     ImGui::Separator();
 
     std::lock_guard<std::mutex> lock(model._mutex);
-    for (auto &test : model._test_cases) {
-      renderTestCaseRow(test, model);
+
+    // Group tests by suite
+    std::map<std::string, std::vector<ZTestModel::ZTestCaseInfo>> suiteMap;
+    for (const auto &test : model._test_cases) {
+      size_t dotPos = test._name.find('.');
+      std::string suiteName = (dotPos != std::string::npos)
+                                  ? test._name.substr(0, dotPos)
+                                  : "Other";
+      suiteMap[suiteName].push_back(test);
     }
 
-    ImGui::Columns(1);
+    for (const auto &[suiteName, tests] : suiteMap) {
+      bool anyFailed =
+          std::any_of(tests.begin(), tests.end(), [](const auto &t) {
+            return t._state == ZState::z_failed;
+          });
+
+      ImGui::PushStyleColor(ImGuiCol_Header,
+                            anyFailed ? ImVec4(0.4f, 0.0f, 0.0f, 0.3f)
+                                      : ImVec4(0.0f, 0.4f, 0.0f, 0.3f));
+
+      if (ImGui::CollapsingHeader(suiteName.c_str())) {
+        for (const auto &test : tests) {
+          ImGui::Columns(3);
+          renderTestCaseRow(test, model);
+        }
+        ImGui::Columns(1);
+      }
+      ImGui::PopStyleColor();
+    }
+
     ImGui::End();
   }
-
   void renderTestCaseRow(const ZTestModel::ZTestCaseInfo &test,
                          ZTestModel &model) {
+    // 添加缩进
+    ImGui::Indent(10.0f);
+
+    // 测试名称列
     ImGui::Selectable(test._name.c_str(), model._selected_test == test._name);
-    if (ImGui::IsItemClicked()) {
+    if (ImGui::IsItemClicked())
       model._selected_test = test._name;
-    }
+    ImGui::Unindent(10.0f);
     ImGui::NextColumn();
 
+    // 状态列
     ImGui::TextColored(
         getStateColor(test._state), "%s",
         test._state == ZState::z_unknown ? "Not Run" : toString(test._state));
     ImGui::NextColumn();
 
+    // 时间列
     ImGui::Text("%.2f", test._duration);
     ImGui::NextColumn();
   }
-
   ImVec4 getStateColor(ZState state) {
     switch (state) {
     case ZState::z_success:
@@ -214,15 +292,16 @@ private:
   void renderStatusBar(ZTestModel &model) {
     ImGuiViewport *viewport = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(
-        ImVec2(viewport->Pos.x, viewport->Pos.y + viewport->Size.y - 30));
-    ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, 25));
+        ImVec2(viewport->Pos.x, viewport->Pos.y + viewport->Size.y - 40));
+    ImGui::SetNextWindowSize(ImVec2(viewport->Size.x, 40));
 
     ImGui::Begin("StatusBar", nullptr,
                  ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoInputs |
                      ImGuiWindowFlags_NoNav);
 
     if (model._is_running) {
-      ImGui::ProgressBar(model._progress, ImVec2(-1, 15), "Running...");
+      ImGui::ProgressBar(model._progress, ImVec2(-1, 15),
+                         model._progress < 1.0f ? "Running..." : "Done...");
     } else {
       int passed = 0, failed = 0;
       for (auto &test : model._test_cases) {

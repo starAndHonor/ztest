@@ -5,7 +5,10 @@ ZTestModel model;
 ZTestContext testContext;
 ZTestController controller(model, testContext);
 ZTestView view;
-int add(int a, int b) { return a + b; }
+int add(int a, int b) {
+  sleep(1);
+  return a + b;
+}
 int subtract(int a, int b) { return a - b; }
 
 ZTEST_F(BasicMath, AdditionTest) {
@@ -31,59 +34,18 @@ ZTEST_F(Performance, MemoryAlloc) {
   return ZState::z_success;
 }
 void InitializeTestContext(ZTestContext &context) {
-  // 创建测试套件
-  auto mathSuite = std::make_unique<ZTestSuite>("BasicMath", ZType::z_safe,
-                                                "基础数学运算测试套件");
-  auto perfSuite = std::make_unique<ZTestSuite>("Performance", ZType::z_unsafe,
-                                                "性能基准测试套件");
-
-  // 使用链式调用添加测试到套件并注册
-  TestFactory::createTest("Addition", ZType::z_safe, "", add, 2, 3)
-      .setExpectedOutput(5)
-      .beforeAll([]() { logger.info("准备加法测试环境...\n"); })
-      .addToSuite(*mathSuite) // 添加到数学套件
-      .registerTest();        // 注册到全局注册表
-
-  TestFactory::createTest("Subtraction", ZType::z_safe, "", subtract, 5, 3)
-      .setExpectedOutput(2)
-      .afterEach([]() { logger.info("清理减法测试数据...\n"); })
-      .addToSuite(*mathSuite)
-      .registerTest();
-
-  TestFactory::createTest(
-      "FailedAddition", ZType::z_safe, "",
-      [](int a, int b) { return add(a, b); }, 2, 3)
-      .setExpectedOutput(6)
-      .addToSuite(*mathSuite)
-      .registerTest();
-
-  TestFactory::createTest("VectorPushBack", ZType::z_unsafe, "",
-                          []() {
-                            std::vector<int> v;
-                            for (int i = 0; i < 1000000; ++i)
-                              v.push_back(i);
-                            return v.size();
-                          })
-      .setExpectedOutput(1000000)
-      .addToSuite(*perfSuite)
-      .registerTest();
-
-  TestFactory::createTest(
-      "Advanced.Multiplication", ZType::z_safe, "",
-      [](int a, int b) { return a * b; }, 4, 5)
-      .setExpectedOutput(20)
-      .registerTest()          // 只注册不加入套件
-      .addToSuite(*mathSuite); // 也可以反过来调用
-
-  // 添加ZTEST_F测试用例（已通过宏自动注册）
-  // auto registeredTests = ZTestRegistry::instance().takeTests();
-  // for (auto &&test : registeredTests) {
-  //   context.addTest(std::move(test));
-  // }
-
-  // 添加套件到上下文
-  // context.addTest(std::move(mathSuite));
-  // context.addTest(std::move(perfSuite));
+  ZTestSuiteFactory::createSuite("BasicMath", ZType::z_safe,
+                                 "基础数学运算测试套件")
+      .addTest(TestFactory::createTest("Addition", ZType::z_safe, "", add, 2, 3)
+                   .setExpectedOutput(5)
+                   .beforeAll([]() { logger.info("准备加法测试环境...\n"); })
+                   .build())
+      .addTest(TestFactory::createTest("Subtraction", ZType::z_safe, "",
+                                       subtract, 5, 3)
+                   .setExpectedOutput(2)
+                   .afterEach([]() { logger.info("清理减法测试数据...\n"); })
+                   .build())
+      .addToRegistry();
 }
 static void glfw_error_callback(int error, const char *description) {
   fprintf(stderr, "GLFW Error %d: %s\n", error, description);

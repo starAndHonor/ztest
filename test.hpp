@@ -4,6 +4,7 @@
 #include <chrono>
 #include <functional>
 #include <iostream>
+#include <map>
 #include <mutex>
 #include <queue>
 #include <thread>
@@ -31,7 +32,6 @@ class TestView;
                                   _z_ass.str());                               \
     }                                                                          \
   } while (0)
-
 #define ASSERT_TRUE(cond)                                                      \
   do {                                                                         \
     if (!(cond)) {                                                             \
@@ -177,7 +177,9 @@ private:
 public:
   ZTestResult()
       : _used_time(0.0), _test_state(ZState::z_failed), _error_msg("") {}
-
+  bool operator==(const ZTestResult &other) const {
+    return _test_name == other._test_name && _test_state == other._test_state;
+  }
   void setResult(const string &name, ZState state, string error_msg,
                  system_clock::time_point start_time,
                  system_clock::time_point end_time, double used_time) {
@@ -245,7 +247,7 @@ public:
       : _name(name), _type(type), _description(description) {}
 
   const string &getName() const override { return _name; }
-
+  virtual unique_ptr<ZTestBase> clone() const = 0;
   const ZType getType() const override { return _type; }
 
   virtual const ZState getState() const { return _state; }
@@ -309,7 +311,10 @@ public:
     setDescription(desc);
     return *this;
   }
-
+  unique_ptr<ZTestBase> clone() const override {
+    auto cloned = make_unique<ZTestSingleCase>(*this);
+    return cloned;
+  }
   ZState run() override {
     if (!_test_func)
       return ZState::z_failed;
@@ -353,7 +358,9 @@ public:
 
   vector<unique_ptr<ZTestBase>> takeTests() {
     lock_guard<mutex> lock(_mutex);
-    return move(_tests);
+    vector<unique_ptr<ZTestBase>> result;
+    result.swap(_tests);
+    return result;
   }
 };
 // ZTestSuite 成组的测试
@@ -368,6 +375,14 @@ private:
 public:
   ZTestSuite(string name, ZType type, string description)
       : ZTestBase(name, type, description) {}
+  ZTestSuite(const ZTestSuite &other)
+      : ZTestBase(other.getName(), other.getType(), other.getDescription()) {
+    for (auto &&test : other._sub_tests) {
+      if (test) {
+        _sub_tests.push_back(test->clone());
+      }
+    }
+  }
 
   ZTestSuite &addTest(unique_ptr<ZTestBase> test) {
     _sub_tests.push_back(move(test));
@@ -409,6 +424,10 @@ public:
     _total_duration = suite_timer.getElapsedMilliseconds();
     setState(_failed == 0 ? ZState::z_success : ZState::z_failed);
     return getState();
+  }
+  unique_ptr<ZTestBase> clone() const override {
+    auto cloned = make_unique<ZTestSuite>(*this);
+    return cloned;
   }
 
   string getSummary() const {
@@ -479,10 +498,13 @@ public:
 };
 
 #define ZTEST_F(suite_name, test_name)                                         \
-  class suite_name##_##test_name : public ZTestBase {                          \
+  class suite_name##_##test_name : public ZTestSuite {                         \
   public:                                                                      \
     suite_name##_##test_name()                                                 \
-        : ZTestBase(#suite_name "." #test_name, ZType::z_safe, "") {}          \
+        : ZTestSuite(#suite_name "." #test_name, ZType::z_safe, "") {}         \
+    unique_ptr<ZTestBase> clone() const override {                             \
+      return make_unique<suite_name##_##test_name>(*this);                     \
+    }                                                                          \
     ZState run() override;                                                     \
     static void _register() {                                                  \
       ZTestRegistry::instance().addTest(                                       \
@@ -501,33 +523,120 @@ public:
 // TestContext维护要管理的ZTestBase的队列，并管理测试结果。
 class ZTestContext {
 private:
-  queue<unique_ptr<ZTestBase>> _test_queue;
-  vector<ZTestResult> _test_result;
+  queue<shared_ptr<ZTestBase>> _test_queue;
+  vector<shared_ptr<ZTestBase>> _test_list;
+  // vector<ZTestResult> _test_result;
   mutex _result_mutex;
   mutex _queue_mutex;
+  mutable mutex _list_mutex;
   TestView *_visualizer;
+  std::unordered_map<std::string, ZTestResult> _test_result_map;
 
 public:
-  const vector<ZTestResult> &getResults() const { return _test_result; }
-
-  vector<unique_ptr<ZTestBase>> getTests() {
+  vector<weak_ptr<ZTestBase>> getTests() {
     lock_guard<mutex> lock(_queue_mutex);
-    vector<unique_ptr<ZTestBase>> tests;
+    vector<weak_ptr<ZTestBase>> tests;
     while (!_test_queue.empty()) {
-      tests.push_back(move(_test_queue.front()));
+      auto shared_test =
+          _test_list.emplace_back(std::move(_test_queue.front()));
       _test_queue.pop();
+      tests.push_back(shared_test);
     }
     return tests;
+  }
+  // 运行所有 z_unsafe 测试（单线程）
+  void runUnsafeOnly() {
+    for (auto &test : _test_list) {
+      if (test->getType() == ZType::z_unsafe) {
+        try {
+          ZTimer timer;
+          timer.start();
+          test->run();
+          timer.stop();
+
+          ZTestResult result;
+          result.setResult(test->getName(), ZState::z_success, "",
+                           timer.getStartTime(), timer.getEndTime(),
+                           timer.getElapsedMilliseconds());
+
+          std::lock_guard<std::mutex> lock(_result_mutex);
+          _test_result_map[test->getName()] = std::move(result);
+        } catch (const std::exception &e) {
+          ZTestResult result;
+          result.setResult(test->getName(), ZState::z_failed, e.what(), {}, {},
+                           0);
+
+          std::lock_guard<std::mutex> lock(_result_mutex);
+          _test_result_map[test->getName()] = std::move(result);
+        }
+      }
+    }
+  }
+
+  // 并行运行 z_safe 测试
+  void runSafeInParallel() {
+    std::queue<shared_ptr<ZTestBase>> safe_queue;
+
+    {
+      std::lock_guard<std::mutex> lock(_list_mutex);
+      for (auto &test : _test_list) {
+        if (test->getType() == ZType::z_safe) {
+          safe_queue.push(test);
+        }
+      }
+    }
+
+    std::vector<std::thread> workers;
+    const unsigned num_workers = std::thread::hardware_concurrency();
+
+    auto worker_task = [this, &safe_queue] {
+      while (!safe_queue.empty()) {
+        shared_ptr<ZTestBase> test;
+        {
+          std::lock_guard<std::mutex> lock(_list_mutex);
+          if (!safe_queue.empty()) {
+            test = safe_queue.front();
+            safe_queue.pop();
+          }
+        }
+        if (test) {
+          runTest(test); // 已有锁保护
+        }
+      }
+    };
+
+    for (unsigned i = 0; i < num_workers; ++i)
+      workers.emplace_back(worker_task);
+
+    for (auto &t : workers)
+      if (t.joinable())
+        t.join();
+  }
+  void clearTestQueue() {
+    std::lock_guard<std::mutex> q_lock(_queue_mutex);
+    std::queue<shared_ptr<ZTestBase>> empty;
+    std::swap(_test_queue, empty);
   }
 
   void setVisualizer(TestView *visualizer) { _visualizer = visualizer; }
 
   void addTest(unique_ptr<ZTestBase> test_case) {
-    lock_guard<mutex> lock(_queue_mutex);
-    _test_queue.push(move(test_case));
-  }
+    lock_guard<mutex> q_lock(_queue_mutex);
+    lock_guard<mutex> l_lock(_list_mutex);
 
-  void runTest(unique_ptr<ZTestBase> test_case) {
+    auto shared_test = shared_ptr<ZTestBase>(std::move(test_case));
+    _test_list.push_back(shared_test);
+    _test_queue.push(std::move(shared_test));
+  }
+  vector<weak_ptr<ZTestBase>> getTestList() const {
+    lock_guard<mutex> lock(_list_mutex); // Now works with mutable
+    vector<weak_ptr<ZTestBase>> result;
+    for (const auto &test : _test_list) {
+      result.emplace_back(test);
+    }
+    return result;
+  }
+  void runTest(shared_ptr<ZTestBase> test_case) {
     ZTestResult result;
     ZTimer local_timer;
     auto *test_ptr = test_case.get();
@@ -551,22 +660,28 @@ public:
                        local_timer.getElapsedMilliseconds());
       logger.error(result.getResultString(test_name) + "\n");
     }
-
-    _test_result.push_back(move(result));
+    lock_guard<mutex> lock(_result_mutex);
+    _test_result_map[test_name] = std::move(result);
+  }
+  const ZTestResult &getTestResult(const string &test_name) const {
+    return _test_result_map.at(test_name);
   }
 
+  const std::unordered_map<std::string, ZTestResult> &getAllResults() const {
+    return _test_result_map;
+  }
   void runAll() {
     vector<thread> workers;
     const unsigned num_workers = thread::hardware_concurrency();
 
     auto worker_task = [this] {
       while (true) {
-        unique_ptr<ZTestBase> test;
+        shared_ptr<ZTestBase> test;
         {
           lock_guard<mutex> lock(_queue_mutex);
           if (_test_queue.empty())
             return;
-          test = move(_test_queue.front());
+          test = _test_queue.front();
           _test_queue.pop();
         }
         runTest(move(test));
@@ -579,12 +694,61 @@ public:
         t.join();
     }
   }
+  void resetQueue() {
+    std::lock_guard<std::mutex> q_lock(_queue_mutex);
+    std::lock_guard<std::mutex> l_lock(_list_mutex);
 
+    _test_queue = {};
+    for (auto &test : _test_list) {
+      _test_queue.push(test);
+    }
+  }
   ZTestContext() {
     while (!_test_queue.empty())
       _test_queue.pop();
-    _test_result.clear();
+    _test_result_map.clear();
   }
 
   ~ZTestContext() = default;
+};
+class SuiteBuilder {
+private:
+  std::unique_ptr<ZTestSuite> _suite;
+
+public:
+  SuiteBuilder(std::unique_ptr<ZTestSuite> suite) : _suite(std::move(suite)) {}
+
+  SuiteBuilder &addTest(std::unique_ptr<ZTestBase> test) {
+    _suite->addTest(std::move(test));
+    return *this;
+  }
+
+  SuiteBuilder &beforeAll(std::function<void()> hook) {
+    _suite->addBeforeAll(std::move(hook));
+    return *this;
+  }
+
+  SuiteBuilder &afterEach(std::function<void()> hook) {
+    _suite->addAfterEach(std::move(hook));
+    return *this;
+  }
+
+  SuiteBuilder &addToRegistry() {
+    ZTestRegistry::instance().addTest(std::move(_suite));
+    return *this;
+  }
+
+  SuiteBuilder &addToContext(ZTestContext &context) {
+    context.addTest(std::move(_suite));
+    return *this;
+  }
+
+  std::unique_ptr<ZTestSuite> build() { return std::move(_suite); }
+};
+class ZTestSuiteFactory {
+public:
+  static SuiteBuilder createSuite(const std::string &name, ZType type,
+                                  const std::string &description) {
+    return SuiteBuilder(std::make_unique<ZTestSuite>(name, type, description));
+  }
 };
