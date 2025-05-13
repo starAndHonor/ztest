@@ -1,6 +1,7 @@
 #include <glad/glad.h>
 
-#include "gui.hpp"
+#include "./ztest/gui.hpp"
+
 ZTestModel model;
 ZTestContext testContext;
 ZTestController controller(model, testContext);
@@ -36,12 +37,13 @@ ZTEST_F(Performance, MemoryAlloc) {
 void InitializeTestContext(ZTestContext &context) {
   ZTestSuiteFactory::createSuite("BasicMath", ZType::z_safe,
                                  "基础数学运算测试套件")
-      .addTest(TestFactory::createTest("Addition", ZType::z_safe, "", add, 2, 3)
+      .addTest(TestFactory::createTest("BasicMath.Addition", ZType::z_safe, "",
+                                       add, 2, 3)
                    .setExpectedOutput(5)
                    .beforeAll([]() { logger.info("准备加法测试环境...\n"); })
                    .build())
-      .addTest(TestFactory::createTest("Subtraction", ZType::z_safe, "",
-                                       subtract, 5, 3)
+      .addTest(TestFactory::createTest("BasicMath.Subtraction", ZType::z_safe,
+                                       "", subtract, 5, 3)
                    .setExpectedOutput(2)
                    .afterEach([]() { logger.info("清理减法测试数据...\n"); })
                    .build())

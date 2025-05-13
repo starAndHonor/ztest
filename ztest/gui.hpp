@@ -1,11 +1,20 @@
 // gui.h
 #pragma once
+#include "core/ztest_base.hpp"
+#include "core/ztest_context.hpp"
+#include "core/ztest_error.hpp"
+#include "core/ztest_macros.hpp"
+#include "core/ztest_registry.hpp"
+#include "core/ztest_result.hpp"
+#include "core/ztest_singlecase.hpp"
+#include "core/ztest_suite.hpp"
+#include "core/ztest_timer.hpp"
+#include "core/ztest_types.hpp"
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
-#include "test.hpp"
 #include <GLFW/glfw3.h>
-
+#include <map>
 class ZTestModel {
 public:
   struct ZTestCaseInfo {
@@ -234,6 +243,7 @@ private:
       suiteMap[suiteName].push_back(test);
     }
 
+    // Render each suite as a collapsible section
     for (const auto &[suiteName, tests] : suiteMap) {
       bool anyFailed =
           std::any_of(tests.begin(), tests.end(), [](const auto &t) {
@@ -245,10 +255,37 @@ private:
                                       : ImVec4(0.0f, 0.4f, 0.0f, 0.3f));
 
       if (ImGui::CollapsingHeader(suiteName.c_str())) {
+        ImGui::Columns(3); // Name | Status | Time
+        ImGui::Text("Test Name");
+        ImGui::NextColumn();
+        ImGui::Text("Status");
+        ImGui::NextColumn();
+        ImGui::Text("Time (ms)");
+        ImGui::Separator();
+        ImGui::NextColumn(); // Reset column
+
         for (const auto &test : tests) {
           ImGui::Columns(3);
-          renderTestCaseRow(test, model);
+
+          // 测试名称列
+          ImGui::Selectable(test._name.c_str(),
+                            model._selected_test == test._name);
+          if (ImGui::IsItemClicked())
+            model._selected_test = test._name;
+          ImGui::NextColumn();
+
+          // 状态列
+          ImGui::TextColored(getStateColor(test._state), "%s",
+                             test._state == ZState::z_unknown
+                                 ? "Not Run"
+                                 : toString(test._state));
+          ImGui::NextColumn();
+
+          // 时间列
+          ImGui::Text("%.2f", test._duration);
+          ImGui::NextColumn();
         }
+
         ImGui::Columns(1);
       }
       ImGui::PopStyleColor();
