@@ -34,8 +34,15 @@ public:
    * @return none
    */
   void runUnsafeOnly() {
+    logger.debug("[Unsafe] Starting unsafe tests execution");
+    size_t total = 0, succeeded = 0, failed = 0;
+
     for (auto &test : _test_list) {
       if (test->getType() == ZType::z_unsafe) {
+        total++;
+        const string &test_name = test->getName();
+        logger.debug("[Unsafe] Running test: " + test_name);
+
         try {
           ZTimer timer;
           timer.start();
@@ -43,22 +50,38 @@ public:
           timer.stop();
 
           ZTestResult result;
-          result.setResult(test->getName(), ZState::z_success, "",
+          result.setResult(test_name, ZState::z_success, "",
                            timer.getStartTime(), timer.getEndTime(),
                            timer.getElapsedMilliseconds());
 
-          std::lock_guard<std::mutex> lock(_result_mutex);
-          ZTestResultManager::getInstance().addResult(std::move(result));
+          {
+            std::lock_guard<std::mutex> lock(_result_mutex);
+            ZTestResultManager::getInstance().addResult(std::move(result));
+          }
+
+          succeeded++;
+          logger.info("[Unsafe] Test succeeded: " + test_name + " (" +
+                      to_string(timer.getElapsedMilliseconds()) + "ms)");
+
         } catch (const std::exception &e) {
           ZTestResult result;
-          result.setResult(test->getName(), ZState::z_failed, e.what(), {}, {},
-                           0);
+          result.setResult(test_name, ZState::z_failed, e.what(), {}, {}, 0);
 
-          std::lock_guard<std::mutex> lock(_result_mutex);
-          ZTestResultManager::getInstance().addResult(std::move(result));
+          {
+            std::lock_guard<std::mutex> lock(_result_mutex);
+            ZTestResultManager::getInstance().addResult(std::move(result));
+          }
+
+          failed++;
+          logger.error("[Unsafe] Test failed: " + test_name +
+                       " - Reason: " + e.what());
         }
       }
     }
+
+    logger.debug("[Unsafe] Execution completed - Total: " + to_string(total) +
+                 " | Succeeded: " + to_string(succeeded) +
+                 " | Failed: " + to_string(failed));
   }
 
   /**
@@ -79,7 +102,7 @@ public:
         std::max(1u, min(std::thread::hardware_concurrency(), 8u));
     ZThreadPool pool(num_workers);
     std::vector<std::future<void>> futures;
-    logger.info("Starting parallel execution of " +
+    logger.info("[Safe] Starting parallel execution of " +
                 std::to_string(safe_tests.size()) + " safe tests using " +
                 std::to_string(num_workers) + " workers");
     // std::thread status_monitor([&pool]() {
@@ -96,7 +119,7 @@ public:
       future.get();
     }
     // status_monitor.join();
-    logger.info("Parallel execution completed");
+    logger.info("[Safe] Parallel execution completed");
   }
   /**
    * @description: 测试样例入队
@@ -188,6 +211,8 @@ public:
     runSafeInParallel();
 
     logger.generateHtmlReport();
+    logger.generateJsonReport();
+    logger.generateJUnitReport();
   }
   /**
    * @description: 运行选定的测试

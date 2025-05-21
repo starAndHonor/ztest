@@ -1,5 +1,3 @@
-
-
 #pragma once
 // TODO: 增加BENCHMARK
 #define EXPECT_EQ(expected, actual)                                            \
@@ -23,11 +21,14 @@
       throw ZTestFailureException(this->getName(), "true", _z_oss.str());      \
     }                                                                          \
   } while (0)
-#define ZTEST_F(suite_name, test_name)                                         \
+#define ZTEST_F(...) ZTEST_IMPL(__VA_ARGS__, ZTEST_F3, ZTEST_F2)(__VA_ARGS__)
+#define ZTEST_IMPL(_1, _2, _3, NAME, ...) NAME
+#define ZTEST_F2(suite_name, test_name) ZTEST_F3(suite_name, test_name, safe)
+#define ZTEST_F3(suite_name, test_name, type)                                  \
   class suite_name##_##test_name : public ZTestBase {                          \
   public:                                                                      \
     suite_name##_##test_name()                                                 \
-        : ZTestBase(#suite_name "." #test_name, ZType::z_safe, "") {}          \
+        : ZTestBase(#suite_name "." #test_name, ZType::z_##type, "") {}        \
     unique_ptr<ZTestBase> clone() const override {                             \
       return make_unique<suite_name##_##test_name>(*this);                     \
     }                                                                          \

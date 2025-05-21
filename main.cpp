@@ -1,3 +1,4 @@
+
 #include "./ztest/gui.hpp"
 int add(int a, int b) {
   sleep(1);
@@ -26,7 +27,7 @@ ZTEST_F(BasicMath, C) {
   EXPECT_EQ(2, subtract(5, 3));
   return ZState::z_success;
 }
-ZTEST_F(Performance, MemoryAlloc) {
+ZTEST_F(Performance, MemoryAlloc, unsafe) {
   const size_t MB100 = 100 * 1024 * 1024;
   auto ptr = std::make_unique<char[]>(MB100);
   ASSERT_TRUE(ptr != nullptr);

@@ -4,6 +4,7 @@
 #include <chrono>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <mutex>
 #include <ostream>
 #include <sstream>
@@ -276,5 +277,131 @@ public:
     reportFile << html.str();
     reportFile.close();
   }
+  /**
+   * @description: 生成json报告
+   * @param {const std::string&} reportFilename
+   * @return {void}
+   */
+  void
+  generateJsonReport(const std::string &reportFilename = "test_report.json") {
+    std::ofstream reportFile(reportFilename);
+    debug("generating json log");
+
+    if (!reportFile) {
+      std::cerr << "Failed to open JSON report file: " << reportFilename
+                << std::endl;
+      return;
+    }
+
+    auto results = ZTestResultManager::getInstance().getResults();
+    int passed = 0, failed = 0;
+
+    std::ostringstream json;
+    json << "{\n";
+    json << "  \"summary\": {\n";
+
+    // Add summary stats
+    for (const auto &[name, result] : results) {
+      result.getState() == ZState::z_success ? passed++ : failed++;
+    }
+
+    json << "    \"total\": " << (passed + failed) << ",\n";
+    json << "    \"passed\": " << passed << ",\n";
+    json << "    \"failed\": " << failed << "\n";
+    json << "  },\n";
+    json << "  \"tests\": [\n";
+
+    // Add test results
+    bool first = true;
+    for (const auto &[name, result] : results) {
+      if (!first)
+        json << ",\n";
+      first = false;
+
+      json << "    {\n";
+      json << "      \"name\": \"" << name << "\",\n";
+      json << "      \"status\": \""
+           << (result.getState() == ZState::z_success ? "Passed" : "Failed")
+           << "\",\n";
+      json << "      \"duration\": " << std::fixed << std::setprecision(2)
+           << result.getUsedTime() << ",\n";
+      json << "      \"error\": \""
+           << (result.getErrorMsg().empty() ? "" : result.getErrorMsg())
+           << "\"\n";
+      json << "    }";
+    }
+
+    json << "\n  ]\n}";
+
+    reportFile << json.str();
+    reportFile.close();
+  }
+  /**
+   * @description:生成junit格式报告，可以用于CI集成
+   * @return {*}
+   */
+  void
+  generateJUnitReport(const std::string &reportFilename = "test_report.xml") {
+    std::ofstream reportFile(reportFilename);
+    debug("generating JUnit XML report");
+
+    if (!reportFile) {
+      std::cerr << "Failed to open JUnit report file: " << reportFilename
+                << std::endl;
+      return;
+    }
+
+    auto results = ZTestResultManager::getInstance().getResults();
+
+    std::map<std::string, std::vector<ZTestResult>> suiteMap;
+    for (const auto &[name, result] : results) {
+      size_t dotPos = name.find('.');
+      std::string suiteName =
+          (dotPos != std::string::npos) ? name.substr(0, dotPos) : "Other";
+      suiteMap[suiteName].push_back(result);
+    }
+
+    std::ostringstream xml;
+    xml << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+    xml << "<testsuites>\n";
+
+    for (const auto &[suiteName, tests] : suiteMap) {
+      int total = tests.size();
+      int failed = 0;
+      double duration = 0.0;
+
+      for (const auto &test : tests) {
+        duration += test.getUsedTime();
+        if (test.getState() == ZState::z_failed)
+          failed++;
+      }
+
+      xml << "  <testsuite name=\"" << suiteName << "\" tests=\"" << total
+          << "\" failures=\"" << failed << "\" errors=\"0\" time=\""
+          << duration / 1000.0 << "\">\n";
+
+      for (const auto &test : tests) {
+        const std::string &name = test.getName();
+        double used_time = test.getUsedTime() / 1000.0; // seconds
+        std::string error_msg = test.getErrorMsg();
+
+        xml << "    <testcase name=\"" << name << "\" classname=\"" << suiteName
+            << "\" time=\"" << std::fixed << std::setprecision(3) << used_time
+            << "\">";
+
+        if (test.getState() == ZState::z_failed) {
+          xml << "\n      <failure message=\"" << error_msg << "\"/>";
+        }
+
+        xml << "</testcase>\n";
+      }
+
+      xml << "  </testsuite>\n";
+    }
+
+    xml << "</testsuites>\n";
+    reportFile << xml.str();
+    reportFile.close();
+  }
 };
-ZLogger logger;
+static ZLogger logger;

@@ -313,7 +313,7 @@ static void glfw_error_callback(int error, const char *description) {
   fprintf(stderr, "GLFW Error %d: %s\n", error, description);
 }
 
-int showUI() {
+inline int showUI() {
   glfwSetErrorCallback(glfw_error_callback);
   if (!glfwInit())
     return 1;
