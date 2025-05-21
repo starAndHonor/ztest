@@ -12,17 +12,13 @@ public:
   ZTimer() : _is_running(false) {}
 
   void start() {
-    if (!_is_running) {
-      _start_time = high_resolution_clock::now();
-      _is_running = true;
-    }
+    if (!_is_running)
+      _start_time = high_resolution_clock::now(), _is_running = true;
   }
 
   void stop() {
-    if (_is_running) {
-      _end_time = high_resolution_clock::now();
-      _is_running = false;
-    }
+    if (_is_running)
+      _end_time = high_resolution_clock::now(), _is_running = false;
   }
 
   void restart() {

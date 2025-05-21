@@ -1,4 +1,7 @@
+
+
 #pragma once
+// TODO: 增加BENCHMARK
 #define EXPECT_EQ(expected, actual)                                            \
   do {                                                                         \
     auto &&_z_expected = (expected);                                           \
@@ -21,10 +24,10 @@
     }                                                                          \
   } while (0)
 #define ZTEST_F(suite_name, test_name)                                         \
-  class suite_name##_##test_name : public ZTestSuite {                         \
+  class suite_name##_##test_name : public ZTestBase {                          \
   public:                                                                      \
     suite_name##_##test_name()                                                 \
-        : ZTestSuite(#suite_name "." #test_name, ZType::z_safe, "") {}         \
+        : ZTestBase(#suite_name "." #test_name, ZType::z_safe, "") {}          \
     unique_ptr<ZTestBase> clone() const override {                             \
       return make_unique<suite_name##_##test_name>(*this);                     \
     }                                                                          \

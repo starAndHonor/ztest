@@ -63,7 +63,8 @@
         "cinttypes": "cpp",
         "map": "cpp",
         "fstream": "cpp",
-        "queue": "cpp"
+        "queue": "cpp",
+        "future": "cpp"
     },
     "latex-workshop.latex.tools": [
         {

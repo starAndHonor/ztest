@@ -1,3 +1,4 @@
+
 #pragma once
 #include <ostream>
 #include <sstream>
@@ -32,3 +33,4 @@ std::ostream &operator<<(std::ostream &os, ZState state) {
   }
   return os;
 }
+enum class ZLogLevel { DEBUG, INFO, WARNING, ERROR };

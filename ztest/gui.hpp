@@ -1,5 +1,6 @@
-// gui.h
 #pragma once
+#include <glad/glad.h>
+
 #include "core/ztest_base.hpp"
 #include "core/ztest_context.hpp"
 #include "core/ztest_error.hpp"
@@ -15,36 +16,13 @@
 #include "imgui_impl_opengl3.h"
 #include <GLFW/glfw3.h>
 #include <map>
+
 class ZTestModel {
 public:
-  struct ZTestCaseInfo {
-    std::string _name;
-    ZState _state;
-    double _duration;
-    std::string _error;
-  };
-
-  std::vector<ZTestCaseInfo> _test_cases;
   std::atomic<bool> _is_running{false};
   float _progress = 0.0f;
   std::string _selected_test;
   std::mutex _mutex;
-
-  void updateFromContext(ZTestContext &context) {
-    std::lock_guard<std::mutex> lock(_mutex);
-    for (auto &[name, result] : context.getAllResults()) {
-      auto it = std::find_if(
-          _test_cases.begin(), _test_cases.end(),
-          [&](const auto &t) { return t._name == result.getName(); });
-
-      if (it != _test_cases.end()) {
-        it->_state = result.getState();
-        it->_duration = result.getUsedTime();
-        it->_error = result.getErrorMsg();
-      }
-    }
-  }
-
   bool tryStartRunning() {
     bool expected = false;
     return _is_running.compare_exchange_strong(expected, true);
@@ -54,10 +32,9 @@ public:
     auto &registry = ZTestRegistry::instance();
     auto tests = registry.takeTests();
 
-    _test_cases.clear();
     for (auto &test : tests) {
-      ZTestCaseInfo info{test->getName(), ZState::z_unknown, 0.0, ""};
-      _test_cases.push_back(info);
+      ZTestResult empty_reslut{test->getName(), 0.0, ZState::z_unknown, ""};
+      ZTestResultManager::getInstance().addResult(empty_reslut);
     }
     for (auto &&test : tests) {
       context.addTest(std::move(test));
@@ -86,26 +63,10 @@ public:
 
     _test_thread = std::thread([this] {
       try {
-        // 1️⃣ 单线程运行 z_unsafe 测试
-        {
-          std::lock_guard<std::mutex> lock(_model._mutex);
-          std::cout << "[THREAD] Running unsafe tests..." << std::endl;
-          _context.runUnsafeOnly(); // 新增方法，单线程执行
-        }
-
-        // 2️⃣ 多线程运行 z_safe 测试
-        {
-          std::lock_guard<std::mutex> lock(_model._mutex);
-          std::cout << "[THREAD] Running safe tests in parallel..."
-                    << std::endl;
-          _context.resetQueue();        // 重置队列
-          _context.runSafeInParallel(); // 使用线程池
-        }
-
+        _context.runAllTests();
       } catch (...) {
         std::cerr << "[THREAD] Exception caught during test execution."
                   << std::endl;
-        throw;
       }
 
       {
@@ -117,7 +78,7 @@ public:
       std::cout << "[THREAD] All tests completed." << std::endl;
     });
 
-    _test_thread.detach(); // 或 join()
+    _test_thread.detach();
   }
 
   void runSelectedTest(const std::string &test_name) {
@@ -127,67 +88,30 @@ public:
     }
 
     if (_test_thread.joinable()) {
-      std::cout << "[INFO] Joining previous thread..." << std::endl;
       _test_thread.join();
     }
 
-    std::cout << "[INFO] Starting new thread for test: " << test_name
-              << std::endl;
     _test_thread = std::thread([this, test_name] {
       bool found = false;
+
       try {
-        auto tests = _context.getTestList();
-        std::cout << "[THREAD] Total tests: " << tests.size() << std::endl;
-
-        for (auto &weak_test : tests) {
-          if (auto test = weak_test.lock()) {
-            std::cout << "[THREAD] Checking test: " << test->getName()
-                      << std::endl;
-            if (test->getName() == test_name) {
-              std::cout << "[THREAD] Running test: " << test_name << std::endl;
-              _context.runTest(test);
-
-              {
-                std::lock_guard<std::mutex> lock(_model._mutex);
-                _model._progress = 1.0f;
-              }
-
-              found = true;
-              break;
-            }
-          }
-        }
-
-        if (!found) {
-          std::cout << "[THREAD] Test not found: " << test_name << std::endl;
-        }
-
+        found = _context.runSelectedTest(test_name);
       } catch (const std::exception &e) {
         std::cerr << "[THREAD] Exception caught: " << e.what() << std::endl;
-        {
-          std::lock_guard<std::mutex> lock(_model._mutex);
-          _model._is_running = false;
-          _model._progress = 0.0f;
-        }
-        throw;
       } catch (...) {
         std::cerr << "[THREAD] Unknown exception caught." << std::endl;
-        {
-          std::lock_guard<std::mutex> lock(_model._mutex);
-          _model._is_running = false;
-          _model._progress = 0.0f;
-        }
-        throw;
       }
 
       {
         std::lock_guard<std::mutex> lock(_model._mutex);
         _model._is_running = false;
-        _model._progress = 0.0f;
+        _model._progress = found ? 1.0f : 0.0f;
       }
 
       std::cout << "[THREAD] Thread function completed." << std::endl;
     });
+
+    _test_thread.detach();
   }
 
 private:
@@ -234,12 +158,12 @@ private:
     std::lock_guard<std::mutex> lock(model._mutex);
 
     // Group tests by suite
-    std::map<std::string, std::vector<ZTestModel::ZTestCaseInfo>> suiteMap;
-    for (const auto &test : model._test_cases) {
-      size_t dotPos = test._name.find('.');
-      std::string suiteName = (dotPos != std::string::npos)
-                                  ? test._name.substr(0, dotPos)
-                                  : "Other";
+    std::map<std::string, std::vector<ZTestResult>> suiteMap;
+    for (const auto &[test_name, test] :
+         ZTestResultManager::getInstance().getResults()) {
+      size_t dotPos = test_name.find('.');
+      std::string suiteName =
+          (dotPos != std::string::npos) ? test_name.substr(0, dotPos) : "Other";
       suiteMap[suiteName].push_back(test);
     }
 
@@ -247,7 +171,7 @@ private:
     for (const auto &[suiteName, tests] : suiteMap) {
       bool anyFailed =
           std::any_of(tests.begin(), tests.end(), [](const auto &t) {
-            return t._state == ZState::z_failed;
+            return t.getState() == ZState::z_failed;
           });
 
       ImGui::PushStyleColor(ImGuiCol_Header,
@@ -268,21 +192,21 @@ private:
           ImGui::Columns(3);
 
           // 测试名称列
-          ImGui::Selectable(test._name.c_str(),
-                            model._selected_test == test._name);
+          ImGui::Selectable(test.getName().c_str(),
+                            model._selected_test == test.getName());
           if (ImGui::IsItemClicked())
-            model._selected_test = test._name;
+            model._selected_test = test.getName();
           ImGui::NextColumn();
 
           // 状态列
-          ImGui::TextColored(getStateColor(test._state), "%s",
-                             test._state == ZState::z_unknown
+          ImGui::TextColored(getStateColor(test.getState()), "%s",
+                             test.getState() == ZState::z_unknown
                                  ? "Not Run"
-                                 : toString(test._state));
+                                 : toString(test.getState()));
           ImGui::NextColumn();
 
           // 时间列
-          ImGui::Text("%.2f", test._duration);
+          ImGui::Text("%.2f", test.getUsedTime());
           ImGui::NextColumn();
         }
 
@@ -293,26 +217,27 @@ private:
 
     ImGui::End();
   }
-  void renderTestCaseRow(const ZTestModel::ZTestCaseInfo &test,
-                         ZTestModel &model) {
+  void renderTestCaseRow(const ZTestResult &test, ZTestModel &model) {
     // 添加缩进
     ImGui::Indent(10.0f);
 
     // 测试名称列
-    ImGui::Selectable(test._name.c_str(), model._selected_test == test._name);
+    ImGui::Selectable(test.getName().c_str(),
+                      model._selected_test == test.getName());
     if (ImGui::IsItemClicked())
-      model._selected_test = test._name;
+      model._selected_test = test.getName();
     ImGui::Unindent(10.0f);
     ImGui::NextColumn();
 
     // 状态列
-    ImGui::TextColored(
-        getStateColor(test._state), "%s",
-        test._state == ZState::z_unknown ? "Not Run" : toString(test._state));
+    ImGui::TextColored(getStateColor(test.getState()), "%s",
+                       test.getState() == ZState::z_unknown
+                           ? "Not Run"
+                           : toString(test.getState()));
     ImGui::NextColumn();
 
     // 时间列
-    ImGui::Text("%.2f", test._duration);
+    ImGui::Text("%.2f", test.getUsedTime());
     ImGui::NextColumn();
   }
   ImVec4 getStateColor(ZState state) {
@@ -341,13 +266,14 @@ private:
                          model._progress < 1.0f ? "Running..." : "Done...");
     } else {
       int passed = 0, failed = 0;
-      for (auto &test : model._test_cases) {
-        if (test._state == ZState::z_success)
+      const auto &test_cases = ZTestResultManager::getInstance().getResults();
+      for (auto &[_, test] : test_cases) {
+        if (test.getState() == ZState::z_success)
           passed++;
-        else if (test._state == ZState::z_failed)
+        else if (test.getState() == ZState::z_failed)
           failed++;
       }
-      ImGui::Text("Total: %d  Passed: %d  Failed: %d", model._test_cases.size(),
+      ImGui::Text("Total: %d  Passed: %d  Failed: %d", test_cases.size(),
                   passed, failed);
     }
 
@@ -358,21 +284,18 @@ private:
     ImGui::Begin("Test Details");
 
     if (!model._selected_test.empty()) {
-      auto it = std::find_if(
-          model._test_cases.begin(), model._test_cases.end(),
-          [&](const auto &t) { return t._name == model._selected_test; });
+      auto it =
+          ZTestResultManager::getInstance().getResult(model._selected_test);
 
-      if (it != model._test_cases.end()) {
-        ImGui::Text("Test Name: %s", it->_name.c_str());
-        ImGui::TextColored(getStateColor(it->_state), "Status: %s",
-                           toString(it->_state));
-        ImGui::Text("Duration: %.2f ms", it->_duration);
+      ImGui::Text("Test Name: %s", it.getName().c_str());
+      ImGui::TextColored(getStateColor(it.getState()), "Status: %s",
+                         toString(it.getState()));
+      ImGui::Text("Duration: %.2f ms", it.getUsedTime());
 
-        if (!it->_error.empty()) {
-          ImGui::Separator();
-          ImGui::TextColored(ImVec4(1, 0, 0, 1), "Error Message:");
-          ImGui::TextWrapped("%s", it->_error.c_str());
-        }
+      if (!it.getErrorMsg().empty()) {
+        ImGui::Separator();
+        ImGui::TextColored(ImVec4(1, 0, 0, 1), "Error Message:");
+        ImGui::TextWrapped("%s", it.getErrorMsg().c_str());
       }
     }
 
@@ -381,3 +304,105 @@ private:
 
   GLFWwindow *_window = nullptr;
 };
+static ZTestModel model;
+static ZTestContext testContext;
+static ZTestController controller(model, testContext);
+static ZTestView view;
+
+static void glfw_error_callback(int error, const char *description) {
+  fprintf(stderr, "GLFW Error %d: %s\n", error, description);
+}
+
+int showUI() {
+  glfwSetErrorCallback(glfw_error_callback);
+  if (!glfwInit())
+    return 1;
+
+// Decide GL+GLSL versions
+#if defined(IMGUI_IMPL_OPENGL_ES2)
+  // GL ES 2.0 + GLSL 100 (WebGL 1.0)
+  const char *glsl_version = "#version 100";
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+  glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+#elif defined(IMGUI_IMPL_OPENGL_ES3)
+  // GL ES 3.0 + GLSL 300 es (WebGL 2.0)
+  const char *glsl_version = "#version 300 es";
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+  glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_ES_API);
+#elif defined(__APPLE__)
+  // GL 3.2 + GLSL 150
+  const char *glsl_version = "#version 150";
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE); // 3.2+ only
+  glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // Required on Mac
+#else
+  // GL 3.0 + GLSL 130
+  const char *glsl_version = "#version 130";
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+  // glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+
+  // only glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // 3.0+ only
+#endif
+
+  GLFWwindow *window =
+      glfwCreateWindow(1280, 720, "ztest gui", nullptr, nullptr);
+  if (window == nullptr)
+    return 1;
+  glfwMakeContextCurrent(window);
+  glfwSwapInterval(1); // Enable vsync
+  if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+    std::cout << "Failed to initialize GLAD" << std::endl;
+    return -1;
+  }
+  // In main.cpp after creating window:
+  IMGUI_CHECKVERSION();
+  ImGui::CreateContext();
+  ImGuiIO &io = ImGui::GetIO();
+  (void)io;
+  ImGui::StyleColorsDark();
+  ImFont *font = io.Fonts->AddFontFromFileTTF(
+      "Hack-Regular.ttf", 25.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
+  // Initialize ImGui backends
+  ImGui_ImplGlfw_InitForOpenGL(window, true);
+  ImGui_ImplOpenGL3_Init(glsl_version); // Use the actual glsl_version variable
+  // 初始化测试上下文
+  // InitializeTestContext(testContext); // 添加测试用例
+  // 初始化MVC组件
+  model.initializeFromRegistry(testContext);
+
+  // 主循环
+  while (!glfwWindowShouldClose(window)) {
+    glfwPollEvents();
+
+    // 开始ImGui帧
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    // 渲染GUI
+    view.render(model, controller);
+
+    // 渲染绘制
+    ImGui::Render();
+    int display_w, display_h;
+    glfwGetFramebufferSize(window, &display_w, &display_h);
+    glViewport(0, 0, display_w, display_h);
+    glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+    glfwSwapBuffers(window);
+  }
+
+  // 清理资源
+  ImGui_ImplOpenGL3_Shutdown();
+  ImGui_ImplGlfw_Shutdown();
+  ImGui::DestroyContext();
+  glfwDestroyWindow(window);
+  glfwTerminate();
+
+  return 0;
+}
