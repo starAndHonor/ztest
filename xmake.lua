@@ -1,6 +1,6 @@
 add_requires("glfw", "imgui", "glad")
-add_requires("imgui", {configs = {glfw_opengl3 = true}})
-
+-- add_requires("imgui", {configs = {glfw_opengl3 = true}})
+add_requires("imgui 1.91.7-docking", {configs = {glfw_opengl3 = true}})
 target("test_gui")
     set_kind("binary")
     add_packages("glfw", "imgui", "glad")  -- Add GLEW here

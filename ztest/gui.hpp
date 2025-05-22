@@ -14,6 +14,7 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "imgui_internal.h"
 #include <GLFW/glfw3.h>
 #include <map>
 
@@ -304,10 +305,6 @@ private:
 
   GLFWwindow *_window = nullptr;
 };
-static ZTestModel model;
-static ZTestContext testContext;
-static ZTestController controller(model, testContext);
-static ZTestView view;
 
 static void glfw_error_callback(int error, const char *description) {
   fprintf(stderr, "GLFW Error %d: %s\n", error, description);
@@ -349,31 +346,44 @@ inline int showUI() {
 
   GLFWwindow *window =
       glfwCreateWindow(1280, 720, "ztest gui", nullptr, nullptr);
-  if (window == nullptr)
-    return 1;
+
+  if (window == nullptr) {
+    logger.error("Failed to create GLFW window");
+    glfwTerminate();
+    return EXIT_FAILURE;
+  }
+
   glfwMakeContextCurrent(window);
   glfwSwapInterval(1); // Enable vsync
   if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
     std::cout << "Failed to initialize GLAD" << std::endl;
     return -1;
   }
+
   // In main.cpp after creating window:
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
   ImGuiIO &io = ImGui::GetIO();
   (void)io;
+  io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
   ImGui::StyleColorsDark();
   ImFont *font = io.Fonts->AddFontFromFileTTF(
       "Hack-Regular.ttf", 25.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
   // Initialize ImGui backends
   ImGui_ImplGlfw_InitForOpenGL(window, true);
   ImGui_ImplOpenGL3_Init(glsl_version); // Use the actual glsl_version variable
-  // 初始化测试上下文
+                                        // 初始化测试上下文
   // InitializeTestContext(testContext); // 添加测试用例
   // 初始化MVC组件
+  ZTestModel model;
+  ZTestContext testContext;
+  ZTestController controller(model, testContext);
+  ZTestView view;
+  view.setWindow(window);
   model.initializeFromRegistry(testContext);
-
+  bool first_time = true;
   // 主循环
+
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
 
@@ -381,6 +391,25 @@ inline int showUI() {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
+    ImGuiID dockspace_id = ImGui::DockSpaceOverViewport();
+
+    if (first_time) {
+      first_time = false;
+      ImGui::DockBuilderRemoveNode(dockspace_id);
+      ImGui::DockBuilderAddNode(dockspace_id);
+
+      ImGuiID dock_main = dockspace_id;
+      ImGuiID dock_left = ImGui::DockBuilderSplitNode(
+          dock_main, ImGuiDir_Left, 0.3f, nullptr, &dock_main);
+      ImGuiID dock_right = ImGui::DockBuilderSplitNode(
+          dock_main, ImGuiDir_Right, 0.5f, nullptr, &dock_main);
+
+      ImGui::DockBuilderDockWindow("Test Cases", dock_left);
+      ImGui::DockBuilderDockWindow("Test Details", dock_right);
+      ImGui::DockBuilderDockWindow("StatusBar", dock_right);
+
+      ImGui::DockBuilderFinish(dockspace_id);
+    }
 
     // 渲染GUI
     view.render(model, controller);
@@ -393,7 +422,6 @@ inline int showUI() {
     glClearColor(0.2f, 0.2f, 0.2f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
     glfwSwapBuffers(window);
   }
 
