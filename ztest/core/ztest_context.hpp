@@ -205,14 +205,17 @@ public:
    * @description: 运行所有测试
    * @return none
    */
-  void runAllTests() {
+  void runAllTests(bool generateHtml = true, bool generateJson = true,
+                   bool generateJUnit = true) {
     runUnsafeOnly();
 
     runSafeInParallel();
-
-    logger.generateHtmlReport();
-    logger.generateJsonReport();
-    logger.generateJUnitReport();
+    if (generateHtml)
+      logger.generateHtmlReport();
+    if (generateJson)
+      logger.generateJsonReport();
+    if (generateJUnit)
+      logger.generateJUnitReport();
   }
   /**
    * @description: 运行选定的测试

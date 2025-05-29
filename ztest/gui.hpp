@@ -5,6 +5,7 @@
 #include "core/ztest_context.hpp"
 #include "core/ztest_error.hpp"
 #include "core/ztest_macros.hpp"
+#include "core/ztest_parameterized.hpp"
 #include "core/ztest_registry.hpp"
 #include "core/ztest_result.hpp"
 #include "core/ztest_singlecase.hpp"
@@ -17,7 +18,6 @@
 #include "imgui_internal.h"
 #include <GLFW/glfw3.h>
 #include <map>
-
 class ZTestModel {
 public:
   std::atomic<bool> _is_running{false};
@@ -132,8 +132,22 @@ public:
   }
 
   void setWindow(GLFWwindow *window) { _window = window; }
+  void applyTheme() {
+    ImGuiStyle &style = ImGui::GetStyle();
+
+    switch (_current_theme) {
+    case Theme::Dark:
+      ImGui::StyleColorsDark();
+      break;
+    case Theme::Light:
+      ImGui::StyleColorsLight();
+      break;
+    }
+  }
 
 private:
+  enum class Theme { Dark, Light };
+  Theme _current_theme = Theme::Dark;
   void renderMainMenu() {
     if (ImGui::BeginMainMenuBar()) {
       if (ImGui::BeginMenu("File")) {
@@ -141,81 +155,239 @@ private:
           glfwSetWindowShouldClose(_window, true);
         ImGui::EndMenu();
       }
+
+      // Add Theme menu
+      if (ImGui::BeginMenu("Theme")) {
+        if (ImGui::MenuItem("Dark", nullptr, _current_theme == Theme::Dark)) {
+          _current_theme = Theme::Dark;
+          applyTheme();
+        }
+        if (ImGui::MenuItem("Light", nullptr, _current_theme == Theme::Light)) {
+          _current_theme = Theme::Light;
+          applyTheme();
+        }
+
+        ImGui::EndMenu();
+      }
+
       ImGui::EndMainMenuBar();
     }
   }
   void renderTestList(ZTestModel &model, ZTestController &controller) {
-    ImGui::Begin("Test Cases", nullptr, ImGuiWindowFlags_MenuBar);
+    ImGui::Begin("Test Cases", nullptr);
 
-    // Control buttons
-    if (ImGui::Button("Run All"))
-      controller.runAllTests();
+    // Filter controls
+    static char filterText[128] = "";
+    ImGui::InputTextWithHint("##Filter", "Search tests...", filterText,
+                             IM_ARRAYSIZE(filterText));
     ImGui::SameLine();
-    if (ImGui::Button("Run Selected") && !model._selected_test.empty()) {
-      controller.runSelectedTest(model._selected_test);
+
+    static int filterState = 0; // 0=All, 1=Passed, 2=Failed, 3=Not Run
+    ImGui::Combo("##StateFilter", &filterState,
+                 "All\0Passed\0Failed\0Not Run\0");
+    ImGui::SameLine();
+
+    // Sorting controls
+    enum SortMode { SORT_NAME, SORT_STATUS, SORT_TIME };
+    static int sortMode = SORT_NAME;
+    static bool sortAscending = true;
+
+    if (ImGui::Button("Name")) {
+      sortMode = SORT_NAME;
+      sortAscending = !sortAscending;
     }
-    ImGui::Separator();
-
-    std::lock_guard<std::mutex> lock(model._mutex);
-
-    // Group tests by suite
-    std::map<std::string, std::vector<ZTestResult>> suiteMap;
-    for (const auto &[test_name, test] :
-         ZTestResultManager::getInstance().getResults()) {
-      size_t dotPos = test_name.find('.');
-      std::string suiteName =
-          (dotPos != std::string::npos) ? test_name.substr(0, dotPos) : "Other";
-      suiteMap[suiteName].push_back(test);
+    ImGui::SameLine();
+    if (ImGui::Button("Status")) {
+      sortMode = SORT_STATUS;
+      sortAscending = !sortAscending;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Time")) {
+      sortMode = SORT_TIME;
+      sortAscending = !sortAscending;
     }
 
-    // Render each suite as a collapsible section
-    for (const auto &[suiteName, tests] : suiteMap) {
-      bool anyFailed =
-          std::any_of(tests.begin(), tests.end(), [](const auto &t) {
-            return t.getState() == ZState::z_failed;
-          });
+    ImGui::BeginChild("ControlButtons", ImVec2(0, 45), true,
+                      ImGuiWindowFlags_NoScrollbar);
+    {
+      const float totalWidth = ImGui::GetContentRegionAvail().x;
+      const float buttonWidth =
+          (totalWidth - ImGui::GetStyle().ItemSpacing.x) * 0.48f;
+      const float totalButtonsWidth =
+          buttonWidth * 2 + ImGui::GetStyle().ItemSpacing.x;
+      const float horizontalOffset = (totalWidth - totalButtonsWidth) * 0.5f;
 
-      ImGui::PushStyleColor(ImGuiCol_Header,
-                            anyFailed ? ImVec4(0.4f, 0.0f, 0.0f, 0.3f)
-                                      : ImVec4(0.0f, 0.4f, 0.0f, 0.3f));
+      // Apply horizontal centering
+      ImGui::SetCursorPosX(ImGui::GetCursorPosX() + horizontalOffset);
 
-      if (ImGui::CollapsingHeader(suiteName.c_str())) {
-        ImGui::Columns(3); // Name | Status | Time
-        ImGui::Text("Test Name");
-        ImGui::NextColumn();
-        ImGui::Text("Status");
-        ImGui::NextColumn();
-        ImGui::Text("Time (ms)");
-        ImGui::Separator();
-        ImGui::NextColumn(); // Reset column
+      // Run All button
+      ImGui::PushStyleColor(
+          ImGuiCol_Button, model._is_running
+                               ? ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled)
+                               : ImVec4(0.25f, 0.65f, 0.25f, 1.0f));
+      if (ImGui::Button("Run All", ImVec2(buttonWidth, 30)) &&
+          !model._is_running) {
+        controller.runAllTests();
+      }
+      ImGui::PopStyleColor();
 
-        for (const auto &test : tests) {
-          ImGui::Columns(3);
+      ImGui::SameLine();
 
-          // 测试名称列
-          ImGui::Selectable(test.getName().c_str(),
-                            model._selected_test == test.getName());
-          if (ImGui::IsItemClicked())
-            model._selected_test = test.getName();
-          ImGui::NextColumn();
-
-          // 状态列
-          ImGui::TextColored(getStateColor(test.getState()), "%s",
-                             test.getState() == ZState::z_unknown
-                                 ? "Not Run"
-                                 : toString(test.getState()));
-          ImGui::NextColumn();
-
-          // 时间列
-          ImGui::Text("%.2f", test.getUsedTime());
-          ImGui::NextColumn();
-        }
-
-        ImGui::Columns(1);
+      // Run Selected button
+      const bool hasSelection = !model._selected_test.empty();
+      ImGui::PushStyleColor(
+          ImGuiCol_Button, (!hasSelection || model._is_running)
+                               ? ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled)
+                               : ImVec4(0.25f, 0.45f, 0.75f, 1.0f));
+      if (ImGui::Button("Run Selected", ImVec2(buttonWidth, 30)) &&
+          hasSelection && !model._is_running) {
+        controller.runSelectedTest(model._selected_test);
       }
       ImGui::PopStyleColor();
     }
+    ImGui::EndChild();
+    ImGui::Separator();
 
+    std::lock_guard<std::mutex> lock(model._mutex);
+    auto allResults = ZTestResultManager::getInstance().getResults();
+
+    // Filter and sort tests
+    std::vector<ZTestResult> filteredTests;
+    for (const auto &[name, result] : allResults) {
+      // Text filter
+      if (filterText[0] != '\0' && name.find(filterText) == std::string::npos) {
+        continue;
+      }
+
+      // State filter
+      switch (filterState) {
+      case 1:
+        if (result.getState() != ZState::z_success)
+          continue;
+        break;
+      case 2:
+        if (result.getState() != ZState::z_failed)
+          continue;
+        break;
+      case 3:
+        if (result.getState() != ZState::z_unknown)
+          continue;
+        break;
+      }
+
+      filteredTests.push_back(result);
+    }
+
+    // Sorting logic
+    std::sort(filteredTests.begin(), filteredTests.end(),
+              [&](const ZTestResult &a, const ZTestResult &b) {
+                switch (sortMode) {
+                case SORT_NAME:
+                  return sortAscending ? a.getName() < b.getName()
+                                       : a.getName() > b.getName();
+                case SORT_STATUS:
+                  return sortAscending ? a.getState() < b.getState()
+                                       : a.getState() > b.getState();
+                case SORT_TIME:
+                  return sortAscending ? a.getUsedTime() < b.getUsedTime()
+                                       : a.getUsedTime() > b.getUsedTime();
+                }
+                return false;
+              });
+
+    // Group by suite after sorting
+    std::map<std::string, std::vector<ZTestResult>> suiteMap;
+    for (const auto &test : filteredTests) {
+      size_t dotPos = test.getName().find('.');
+      std::string suiteName = (dotPos != std::string::npos)
+                                  ? test.getName().substr(0, dotPos)
+                                  : "Other";
+      suiteMap[suiteName].push_back(test);
+    }
+
+    // Style improvements
+    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, {8, 4});
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, {4, 4});
+
+    // Performance optimization
+    ImGuiListClipper clipper;
+    clipper.Begin(suiteMap.size());
+
+    while (clipper.Step()) {
+      auto it = suiteMap.begin();
+      std::advance(it, clipper.DisplayStart);
+
+      for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; ++i, ++it) {
+        const auto &[suiteName, tests] = *it;
+
+        bool anyFailed =
+            std::any_of(tests.begin(), tests.end(), [](const auto &t) {
+              return t.getState() == ZState::z_failed;
+            });
+
+        ImGui::PushStyleColor(ImGuiCol_Header,
+                              anyFailed ? ImVec4(0.4f, 0.0f, 0.0f, 0.3f)
+                                        : ImVec4(0.0f, 0.4f, 0.0f, 0.3f));
+
+        if (ImGui::CollapsingHeader(suiteName.c_str(),
+                                    ImGuiTreeNodeFlags_DefaultOpen)) {
+
+          if (ImGui::BeginTable("TestTable", 3,
+                                ImGuiTableFlags_BordersInnerV |
+                                    ImGuiTableFlags_SizingFixedFit |
+                                    ImGuiTableFlags_RowBg)) {
+
+            ImGui::TableSetupColumn("Test Name",
+                                    ImGuiTableColumnFlags_WidthStretch);
+            ImGui::TableSetupColumn("Status", ImGuiTableColumnFlags_WidthFixed,
+                                    100);
+            ImGui::TableSetupColumn("Time (ms)",
+                                    ImGuiTableColumnFlags_WidthFixed, 80);
+            ImGui::TableHeadersRow();
+
+            for (const auto &test : tests) {
+              ImGui::TableNextRow();
+
+              // Test name column
+              ImGui::TableSetColumnIndex(0);
+              ImGui::Selectable(test.getName().c_str(),
+                                model._selected_test == test.getName(),
+                                ImGuiSelectableFlags_SpanAllColumns);
+
+              if (ImGui::IsItemClicked()) {
+                model._selected_test = test.getName();
+              }
+
+              // Context menu
+              if (ImGui::BeginPopupContextItem()) {
+                if (ImGui::MenuItem("Run Test")) {
+                  controller.runSelectedTest(test.getName());
+                }
+                if (ImGui::MenuItem("Copy Name")) {
+                  ImGui::SetClipboardText(test.getName().c_str());
+                }
+                ImGui::EndPopup();
+              }
+
+              // Status column
+              ImGui::TableSetColumnIndex(1);
+              ImGui::TextColored(getStateColor(test.getState()), "%s",
+                                 test.getState() == ZState::z_unknown
+                                     ? "Not Run"
+                                     : toString(test.getState()));
+
+              // Time column
+              ImGui::TableSetColumnIndex(2);
+              ImGui::Text("%.2f", test.getUsedTime());
+            }
+            ImGui::EndTable();
+          }
+        }
+        ImGui::PopStyleColor();
+      }
+    }
+
+    ImGui::PopStyleVar(2);
     ImGui::End();
   }
   void renderTestCaseRow(const ZTestResult &test, ZTestModel &model) {
@@ -360,13 +532,16 @@ inline int showUI() {
     return -1;
   }
 
-  // In main.cpp after creating window:
+  ZTestModel model;
+  ZTestContext testContext;
+  ZTestController controller(model, testContext);
+  ZTestView view;
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
   ImGuiIO &io = ImGui::GetIO();
   (void)io;
   io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-  ImGui::StyleColorsDark();
+  view.applyTheme();
   ImFont *font = io.Fonts->AddFontFromFileTTF(
       "Hack-Regular.ttf", 25.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
   // Initialize ImGui backends
@@ -375,10 +550,7 @@ inline int showUI() {
                                         // 初始化测试上下文
   // InitializeTestContext(testContext); // 添加测试用例
   // 初始化MVC组件
-  ZTestModel model;
-  ZTestContext testContext;
-  ZTestController controller(model, testContext);
-  ZTestView view;
+
   view.setWindow(window);
   model.initializeFromRegistry(testContext);
   bool first_time = true;
@@ -431,6 +603,53 @@ inline int showUI() {
   ImGui::DestroyContext();
   glfwDestroyWindow(window);
   glfwTerminate();
+
+  return 0;
+}
+inline int runFromCLI(const std::vector<std::string> &args,
+                      ZTestContext &context) {
+  bool runAll = false;
+  std::string selectedTest;
+
+  for (const auto &arg : args) {
+    if (arg == "--help") {
+      std::cout << "Usage: ztest_cli [OPTIONS]\n"
+                << "Options:\n"
+                << "  --help           Show this help\n"
+                << "  --run-all        Run all tests\n"
+                << "  --run-test=name  Run specific test\n"
+                << "  --list-tests     List all tests\n"
+                << "  --report=formats Generate reports (json,html,junit)\n"
+                << "  --no-gui         Run in headless mode\n";
+      return 0;
+      // TODO: 实现report部分逻辑
+    } else if (arg == "--run-all") {
+      runAll = true;
+    } else if (arg.substr(0, 10) == "--run-test") {
+      selectedTest = arg.substr(11);
+      // TODO: CLI指定运行指定测试
+    } else if (arg == "--list-tests") {
+      for (const auto &test : ZTestRegistry::instance().takeTests()) {
+        std::cout << test->getName() << "\n";
+      }
+      return 0;
+    }
+  }
+
+  ZTestModel model;
+  model.initializeFromRegistry(context);
+
+  if (runAll) {
+    context.runAllTests();
+  } else if (!selectedTest.empty()) {
+    if (!context.runSelectedTest(selectedTest)) {
+      std::cerr << "Test not found: " << selectedTest << "\n";
+      return 1;
+    }
+  } else {
+    std::cerr << "No test specified to run.\n";
+    return 1;
+  }
 
   return 0;
 }
