@@ -14,14 +14,18 @@ private:
   high_resolution_clock::time_point _end_time;
   ZState _test_state;
   string _error_msg;
+  int _iterations;
+  double _avg_time;
 
 public:
   ZTestResult()
       : _test_name("unknown"), _duration(0.0), _test_state(ZState::z_failed),
         _error_msg("") {}
-  ZTestResult(string test_name, double duration, ZState state, string error_msg)
+  ZTestResult(string test_name, double duration, ZState state, string error_msg,
+              int iterations = 1)
       : _test_name(test_name), _duration(duration), _test_state(state),
-        _error_msg(error_msg) {}
+        _error_msg(error_msg), _iterations(iterations),
+        _avg_time(duration / iterations) {}
   bool operator==(const ZTestResult &other) const {
     return _test_name == other._test_name && _test_state == other._test_state;
   }
@@ -31,13 +35,16 @@ public:
    */
   void setResult(const string &name, ZState state, string error_msg,
                  system_clock::time_point start_time,
-                 system_clock::time_point end_time, double used_time) {
+                 system_clock::time_point end_time, double used_time,
+                 int iterations = 1) {
     _test_name = name;
     _test_state = state;
     _error_msg = error_msg;
     _start_time = start_time;
     _end_time = end_time;
     _duration = used_time;
+    _iterations = iterations;
+    _avg_time = used_time / iterations;
   }
 
   const double &getUsedTime() const { return _duration; }
@@ -45,7 +52,8 @@ public:
   const string &getErrorMsg() const { return _error_msg; }
 
   const string &getName() const { return _test_name; }
-
+  const double getAverageTime() const { return _avg_time; }
+  const int getIterations() const { return _iterations; }
   ZState getState() const { return _test_state; }
 
   /**

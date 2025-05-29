@@ -121,6 +121,57 @@ public:
     // status_monitor.join();
     logger.info("[Safe] Parallel execution completed");
   }
+  void runBenchmarkOnly() {
+    logger.debug("[Benchmark] Starting benchmark tests execution");
+    size_t total = 0, succeeded = 0, failed = 0;
+
+    for (auto &test : _test_list) {
+      if (test->getType() == ZType::z_benchmark) {
+        total++;
+        const string &test_name = test->getName();
+        logger.debug("[Benchmark] Running test: " + test_name);
+
+        try {
+          ZTimer timer;
+          timer.start();
+          test->run();
+          timer.stop();
+
+          ZTestResult result;
+          result.setResult(test_name, ZState::z_success, "",
+                           timer.getStartTime(), timer.getEndTime(),
+                           timer.getElapsedMilliseconds(),
+                           1000); // 假设默认迭代1000次
+
+          {
+            std::lock_guard<std::mutex> lock(_result_mutex);
+            ZTestResultManager::getInstance().addResult(std::move(result));
+          }
+
+          succeeded++;
+          logger.info("[Benchmark] Test succeeded: " + test_name +
+                      " | Average: " + std::to_string(result.getAverageTime()) +
+                      " ms");
+
+        } catch (const std::exception &e) {
+          ZTestResult result;
+          result.setResult(test_name, ZState::z_failed, e.what(), {}, {}, 0, 1);
+          {
+            std::lock_guard<std::mutex> lock(_result_mutex);
+            ZTestResultManager::getInstance().addResult(std::move(result));
+          }
+
+          failed++;
+          logger.error("[Benchmark] Test failed: " + test_name +
+                       " - Reason: " + e.what());
+        }
+      }
+    }
+
+    logger.debug("[Benchmark] Execution completed - Total: " +
+                 to_string(total) + " | Succeeded: " + to_string(succeeded) +
+                 " | Failed: " + to_string(failed));
+  }
   /**
    * @description: 测试样例入队
    * @param {shared_ptr<ZTestBase>} test_case
@@ -143,17 +194,6 @@ public:
     std::queue<shared_ptr<ZTestBase>> empty;
     std::swap(_test_queue, empty);
   }
-
-  // TODO: 此处的获取测试列表应该放到注册阶段完成
-  vector<weak_ptr<ZTestBase>> getTestList() const {
-    lock_guard<mutex> lock(_list_mutex); // Now works with mutable
-    vector<weak_ptr<ZTestBase>> result;
-    for (const auto &test : _test_list) {
-      result.emplace_back(test);
-    }
-    return result;
-  }
-  // TODO: 运行每一个测试样例应该放在singlecase和suite中完成
   /**
    * @description: 运行单个测试样例
    * @param {shared_ptr<ZTestBase>} test_case
@@ -210,6 +250,8 @@ public:
     runUnsafeOnly();
 
     runSafeInParallel();
+    runBenchmarkOnly();
+
     if (generateHtml)
       logger.generateHtmlReport();
     if (generateJson)

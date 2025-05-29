@@ -2,6 +2,7 @@
 #include <glad/glad.h>
 
 #include "core/ztest_base.hpp"
+#include "core/ztest_benchmark.hpp"
 #include "core/ztest_context.hpp"
 #include "core/ztest_error.hpp"
 #include "core/ztest_macros.hpp"
@@ -463,7 +464,9 @@ private:
       ImGui::Text("Test Name: %s", it.getName().c_str());
       ImGui::TextColored(getStateColor(it.getState()), "Status: %s",
                          toString(it.getState()));
-      ImGui::Text("Duration: %.2f ms", it.getUsedTime());
+      ImGui::Text("Total Time: %.2f ms", it.getUsedTime());
+      ImGui::Text("Average Time: %.6f ms", it.getAverageTime());
+      ImGui::Text("Iterations: %d", it.getIterations());
 
       if (!it.getErrorMsg().empty()) {
         ImGui::Separator();

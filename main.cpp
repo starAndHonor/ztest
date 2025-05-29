@@ -77,7 +77,13 @@ void createTestSuite() {
           .addToRegistry()
           .build(); // Register the
 }
-
+ZBENCHMARK(Vector, PushBack) {
+  std::vector<int> v;
+  for (int i = 0; i < 10000; ++i) {
+    v.push_back(i);
+  }
+  return ZState::z_success;
+}
 int main(int argc, char *argv[]) {
   std::vector<std::string> args(argv + 1, argv + argc);
   ZTestContext context;
