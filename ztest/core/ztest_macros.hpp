@@ -1,13 +1,3 @@
-/*
- * @Author: starAndHonor 13750616920@163.com
- * @Date: 2025-05-22 23:29:19
- * @LastEditors: starAndHonor 13750616920@163.com
- * @LastEditTime: 2025-05-29 14:16:48
- * @FilePath: /ztest/ztest/core/ztest_macros.hpp
- * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置
- * 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
- */
-
 #pragma once
 // TODO: 增加BENCHMARK
 #define EXPECT_EQ(expected, actual)                                            \
@@ -31,6 +21,11 @@
       throw ZTestFailureException(this->getName(), "true", _z_oss.str());      \
     }                                                                          \
   } while (0)
+
+#define BEFOREALL(func) addBeforeAll([this]() { func; })
+#define AFTEREACH(func) addAfterEach([this]() { func; })
+#define AFTERALL(func) addAfterAll([this]() { func; })
+
 #define ZTEST_F(...) ZTEST_IMPL(__VA_ARGS__, ZTEST_F3, ZTEST_F2)(__VA_ARGS__)
 #define ZTEST_IMPL(_1, _2, _3, NAME, ...) NAME
 #define ZTEST_F2(suite_name, test_name) ZTEST_F3(suite_name, test_name, safe)

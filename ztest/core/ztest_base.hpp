@@ -1,3 +1,4 @@
+
 #pragma once
 #include "ztest_types.hpp"
 #include <bits/unique_ptr.h>
@@ -24,6 +25,7 @@ private:
   ZState _state;
   vector<function<void()>> _before_all_hooks;
   vector<function<void()>> _after_each_hooks;
+  vector<function<void()>> _after_all_hooks;
 
 public:
   ZTestBase(string name, ZType type, string description)
@@ -64,5 +66,14 @@ public:
     for (auto &hook : _after_each_hooks) {
       hook();
     }
+  }
+  virtual void runAfterAll() {
+    for (auto &hook : _after_all_hooks) {
+      hook();
+    }
+  }
+  virtual ZTestBase &addAfterAll(function<void()> hook) {
+    _after_all_hooks.push_back(move(hook));
+    return *this;
   }
 };

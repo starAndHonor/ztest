@@ -42,7 +42,6 @@ public:
   ZState run() override {
     _total_duration = 0.0;
     _passed = _failed = 0;
-    runBeforeAll();
     ZTimer suite_timer;
     suite_timer.start();
     for (auto &test : _sub_tests) {

@@ -17,7 +17,6 @@
 | 🧪 断言宏扩展 | 提供了基本的 [EXPECT_EQ](file:///home/starandhonor/code/ztest/ztest/core/ztest_macros.hpp#L2-L15) 和 [ASSERT_TRUE](file:///home/starandhonor/code/ztest/ztest/core/ztest_macros.hpp#L15-L23) | 补充更多常用断言：`EXPECT_NE`, `EXPECT_GT`, `EXPECT_LT`, `EXPECT_THROW`, `EXPECT_NO_THROW` 等 |
 | 📋 参数化测试 | 暂未实现 | 增加参数化测试支持，允许对同一测试函数运行多组输入 |
 | ⏱️ 超时控制 | 暂未实现 | 对单个测试或整个测试套件设置超时限制，防止死循环/卡住 |
-| 🔁 Setup/Teardown 支持 | 类似 `beforeAll` / `afterEach` | 支持更细粒度的 setup/teardown（如每个测试前/后、每个套件前/后） |
 | 🧬 死亡测试 | 暂未实现 | 验证程序是否因调用 `exit()` 或异常终止而“死亡” |
 | 🧼 内存泄漏检测 | 暂未集成 | 可以集成 Valgrind 或自定义内存分配器用于检测内存问题 |
 
@@ -27,9 +26,6 @@
 
 | 方面 | 当前状态 | 改进建议 |
 |------|----------|----------|
-| 🧵 多线程调度 | 使用 [ZThreadPool](file:///home/starandhonor/code/ztest/ztest/core/ztest_thread.hpp#L9-L116) 实现并行 | 更灵活的任务优先级、任务分组、CPU亲和性等高级特性 |
-| 💡 负载均衡 | FIFO队列 | 引入 work-stealing 算法提高负载均衡效率 |
-| 📈 性能监控 | 提供时间统计 | 增加 CPU/内存占用、GC 触发次数等指标可视化 |
 | 🧠 缓存复用 | 无缓存策略 | 对频繁创建的对象使用对象池技术减少内存分配开销 |
 
 ---
@@ -41,7 +37,6 @@
 | 🧩 插件系统 | 暂未提供 | 允许通过插件形式添加新的报告格式、断言库、日志样式等 |
 | 🌐 分布式测试 | 单机版 | 支持分布式测试执行（适用于大规模测试集） |
 | 🔄 自定义测试发现 | 手动注册 | 支持自动扫描源码目录中的测试类/方法 |
-| 🛠️ CLI 接口 | 无 | 提供命令行接口支持过滤、排序、报告格式选择等操作 |
 
 ---
 
@@ -49,7 +44,6 @@
 
 | 方面 | 当前状态 | 改进建议 |
 |------|----------|----------|
-| 🎨 主题与样式 | 黑色主题 | 支持多种 UI 主题切换（亮色、暗色、高对比等） |
 | 📊 数据图表 | 文本输出为主 | 在 GUI 中增加柱状图、饼图展示测试分布与耗时 |
 | 📝 日志信息 | 输出较详细 | 增加 log level 控制，支持 debug/info/warning/error 分级 |
 | 🧾 报告内容 | 提供 HTML/JSON/JUnit | 增加 Markdown、CSV 格式导出；支持失败详情折叠展开 |
@@ -108,7 +102,6 @@
 | 📦 成为独立开源项目 | 发布到 GitHub，支持包管理安装（vcpkg, conan） |
 | 🧪 支持 Property-based Testing | 类似 QuickCheck/Hedgehog，随机数据驱动测试 |
 | 🤖 AI 辅助测试 | 利用 LLM 自动生成测试用例、异常分析建议 |
-| 🧬 Benchmark 支持 | 集成性能基准测试模块，支持回归检测 |
 
 ---
 

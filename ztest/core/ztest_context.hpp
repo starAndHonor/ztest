@@ -215,9 +215,11 @@ public:
       logger.debug(
           "Starting test [" + test_case->getName() + "] on thread: " +
           ZThreadPool::thread_id_to_string(std::this_thread::get_id()));
+      test_case->runBeforeAll();
       local_timer.start();
       auto test_state = test_case->run();
       local_timer.stop();
+      test_case->runAfterAll();
       logger.debug(
           "Finished test [" + test_case->getName() + "] on thread: " +
           ZThreadPool::thread_id_to_string(std::this_thread::get_id()));

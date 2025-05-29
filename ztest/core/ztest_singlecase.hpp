@@ -39,9 +39,9 @@ public:
       return ZState::z_failed;
 
     try {
-      runBeforeAll();
+      // runBeforeAll();
       auto actual = _test_func();
-      runAfterEach();
+      // runAfterEach();
       if (actual != _expected_return) {
         ostringstream expected_oss, actual_oss;
         expected_oss << _expected_return;

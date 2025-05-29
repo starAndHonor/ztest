@@ -1,6 +1,7 @@
 #pragma once
 #include <glad/glad.h>
 
+// #include "./lib/implot/implot.h"
 #include "core/ztest_base.hpp"
 #include "core/ztest_benchmark.hpp"
 #include "core/ztest_context.hpp"
@@ -17,6 +18,7 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_internal.h"
+#include "implot.h"
 #include <GLFW/glfw3.h>
 #include <map>
 class ZTestModel {
@@ -130,6 +132,7 @@ public:
     renderTestList(model, controller);
     renderStatusBar(model);
     renderDetailsWindow(model);
+    renderResourceMonitor();
   }
 
   void setWindow(GLFWwindow *window) { _window = window; }
@@ -145,8 +148,85 @@ public:
       break;
     }
   }
+  std::chrono::steady_clock::time_point _last_update;
+  void updateResourceUsage() {
+    if (!_enable_monitoring)
+      return;
+
+    auto now = std::chrono::steady_clock::now();
+
+    _cpu_history.push(getCpuUsage());
+    _memory_history.push(getMemoryUsage());
+
+    while (_cpu_history.size() > maxHistorySize)
+      _cpu_history.pop();
+    while (_memory_history.size() > maxHistorySize)
+      _memory_history.pop();
+
+    _last_update = now;
+  }
 
 private:
+  std::queue<float> _cpu_history;
+  std::queue<float> _memory_history;
+  const size_t maxHistorySize = 60;
+  bool _enable_monitoring = true;
+  std::vector<float> queueToVector(const std::queue<float> &q) {
+    std::vector<float> result;
+    std::queue<float> temp = q;
+    while (!temp.empty()) {
+      result.push_back(temp.front());
+      temp.pop();
+    }
+    return result;
+  }
+  // Platform-specific resource monitoring
+  float getCpuUsage() {
+    std::ifstream stat("/proc/stat");
+    std::string line;
+    std::getline(stat, line);
+    std::istringstream ss(line);
+    std::string cpu;
+    long user, nice, system, idle, iowait, irq, softirq;
+    ss >> cpu >> user >> nice >> system >> idle >> iowait >> irq >> softirq;
+
+    static long prev_total = 0, prev_idle = 0;
+    long total = user + nice + system + idle + iowait + irq + softirq;
+    long diff_total = total - prev_total;
+    long diff_idle = idle - prev_idle;
+
+    float usage =
+        (diff_total == 0) ? 0 : 100.0f * (diff_total - diff_idle) / diff_total;
+
+    prev_total = total;
+    prev_idle = idle;
+    return usage;
+  }
+
+  float getMemoryUsage() {
+    std::ifstream meminfo("/proc/meminfo");
+    std::string line;
+    long total = 0, free = 0, buffers = 0, cached = 0;
+
+    while (std::getline(meminfo, line)) {
+      if (line.find("MemTotal:") == 0) {
+        sscanf(line.c_str(), "MemTotal: %ld kB", &total);
+      } else if (line.find("MemFree:") == 0) {
+        sscanf(line.c_str(), "MemFree: %ld kB", &free);
+      } else if (line.find("Buffers:") == 0) {
+        sscanf(line.c_str(), "Buffers: %ld kB", &buffers);
+      } else if (line.find("Cached:") == 0 || line.find("SReclaimable:") == 0) {
+        sscanf(line.c_str(), "Cached: %ld kB", &cached);
+      }
+    }
+
+    if (total > 0) {
+      long used = total - free - buffers - cached;
+      return (float)(used * 100) / total;
+    }
+    return 0.0f;
+  }
+
   enum class Theme { Dark, Light };
   Theme _current_theme = Theme::Dark;
   void renderMainMenu() {
@@ -170,9 +250,64 @@ private:
 
         ImGui::EndMenu();
       }
-
+      if (ImGui::BeginMenu("Options")) {
+        ImGui::MenuItem("Enable Resource Monitoring", "", &_enable_monitoring);
+        ImGui::EndMenu();
+      }
       ImGui::EndMainMenuBar();
     }
+  }
+  void renderResourceMonitor() {
+    ImGui::Begin("System Resources");
+
+    std::vector<float> cpuData = queueToVector(_cpu_history);
+    std::vector<float> memoryData = queueToVector(_memory_history);
+
+    ImVec2 contentSize = ImGui::GetContentRegionAvail();
+    const float plotHeight = contentSize.y * 1.0f;
+
+    // Calculate centered width (80% of available width)
+    const float totalWidth = contentSize.x * 0.8f;
+    const float plotWidth = totalWidth / 2 - ImGui::GetStyle().ItemSpacing.x;
+
+    // Horizontal centering container
+    ImGui::SetCursorPosX((contentSize.x - totalWidth) * 0.5f);
+    ImGui::BeginGroup();
+
+    // CPU Plot
+    ImPlot::SetNextAxesLimits(0, maxHistorySize, 0, 100, ImPlotCond_Always);
+    if (ImPlot::BeginPlot("##CPU", "Time", "Usage %",
+                          ImVec2(plotWidth, plotHeight))) {
+      ImPlot::SetNextLineStyle(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), 2.0f);
+      ImPlot::PlotLine("CPU", cpuData.data(), cpuData.size());
+      ImPlot::EndPlot();
+    }
+
+    ImGui::SameLine();
+
+    // Memory Plot
+    ImPlot::SetNextAxesLimits(0, maxHistorySize, 0, 100, ImPlotCond_Always);
+    if (ImPlot::BeginPlot("##Memory", "Time", "Usage %",
+                          ImVec2(plotWidth, plotHeight))) {
+      ImPlot::SetNextLineStyle(ImVec4(0.0f, 0.5f, 1.0f, 1.0f), 2.0f);
+      ImPlot::PlotLine("Memory", memoryData.data(), memoryData.size());
+      ImPlot::EndPlot();
+    }
+
+    ImGui::EndGroup();
+    ImGui::End();
+  }
+  float getTotalMemory() {
+    std::ifstream meminfo("/proc/meminfo");
+    std::string line;
+    long total = 0;
+    while (std::getline(meminfo, line)) {
+      if (line.find("MemTotal:") == 0) {
+        sscanf(line.c_str(), "MemTotal: %ld kB", &total);
+        return total / 1048576.0f; // Convert to GB
+      }
+    }
+    return 0.0f;
   }
   void renderTestList(ZTestModel &model, ZTestController &controller) {
     ImGui::Begin("Test Cases", nullptr);
@@ -447,8 +582,28 @@ private:
         else if (test.getState() == ZState::z_failed)
           failed++;
       }
+      float cpu_usage = _cpu_history.empty() ? 0.0f : _cpu_history.back();
+      float mem_usage = _memory_history.empty() ? 0.0f : _memory_history.back();
+
+      // Add color-coded resource indicators
+      ImVec4 cpuColor = (cpu_usage > 80.0f)   ? ImVec4(1, 0, 0, 1)
+                        : (cpu_usage > 50.0f) ? ImVec4(1, 1, 0, 1)
+                                              : ImVec4(0, 1, 0, 1);
+
+      ImVec4 memColor = (mem_usage > 80.0f)   ? ImVec4(1, 0, 0, 1)
+                        : (mem_usage > 50.0f) ? ImVec4(1, 1, 0, 1)
+                                              : ImVec4(0, 1, 0, 1);
+
       ImGui::Text("Total: %d  Passed: %d  Failed: %d", test_cases.size(),
                   passed, failed);
+
+      ImGui::SameLine();
+      ImGui::Text("|");
+      ImGui::SameLine();
+      ImGui::TextColored(cpuColor, " CPU: %.1f%%", cpu_usage);
+
+      ImGui::SameLine();
+      ImGui::TextColored(memColor, " Mem: %.1f%%", mem_usage);
     }
 
     ImGui::End();
@@ -541,6 +696,7 @@ inline int showUI() {
   ZTestView view;
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
+  ImPlot::CreateContext();
   ImGuiIO &io = ImGui::GetIO();
   (void)io;
   io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
@@ -549,8 +705,8 @@ inline int showUI() {
       "Hack-Regular.ttf", 25.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
   // Initialize ImGui backends
   ImGui_ImplGlfw_InitForOpenGL(window, true);
-  ImGui_ImplOpenGL3_Init(glsl_version); // Use the actual glsl_version variable
-                                        // 初始化测试上下文
+  ImGui_ImplOpenGL3_Init(glsl_version); // Use the actual glsl_version
+                                        // variable 初始化测试上下文
   // InitializeTestContext(testContext); // 添加测试用例
   // 初始化MVC组件
 
@@ -566,26 +722,33 @@ inline int showUI() {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
+    if (std::chrono::duration_cast<std::chrono::seconds>(
+            std::chrono::steady_clock::now() - view._last_update)
+            .count() >= 0.2) {
+      view.updateResourceUsage();
+    }
     ImGuiID dockspace_id = ImGui::DockSpaceOverViewport();
 
-    if (first_time) {
-      first_time = false;
-      ImGui::DockBuilderRemoveNode(dockspace_id);
-      ImGui::DockBuilderAddNode(dockspace_id);
+    // if (first_time) {
+    //   first_time = false;
+    //   ImGui::DockBuilderRemoveNode(dockspace_id);
+    //   ImGui::DockBuilderAddNode(dockspace_id);
 
-      ImGuiID dock_main = dockspace_id;
-      ImGuiID dock_left = ImGui::DockBuilderSplitNode(
-          dock_main, ImGuiDir_Left, 0.3f, nullptr, &dock_main);
-      ImGuiID dock_right = ImGui::DockBuilderSplitNode(
-          dock_main, ImGuiDir_Right, 0.5f, nullptr, &dock_main);
+    //   ImGuiID dock_main = dockspace_id;
+    //   ImGuiID dock_left = ImGui::DockBuilderSplitNode(
+    //       dock_main, ImGuiDir_Left, 0.3f, nullptr, &dock_main);
+    //   ImGuiID dock_right = ImGui::DockBuilderSplitNode(
+    //       dock_main, ImGuiDir_Right, 0.5f, nullptr, &dock_main);
+    //   ImGuiID dock_bottom = ImGui::DockBuilderSplitNode(
+    //       dock_main, ImGuiDir_Down, 0.3f, nullptr, &dock_main);
 
-      ImGui::DockBuilderDockWindow("Test Cases", dock_left);
-      ImGui::DockBuilderDockWindow("Test Details", dock_right);
-      ImGui::DockBuilderDockWindow("StatusBar", dock_right);
+    //   ImGui::DockBuilderDockWindow("Test Cases", dock_left);
+    //   ImGui::DockBuilderDockWindow("Test Details", dock_right);
+    //   ImGui::DockBuilderDockWindow("StatusBar", dock_right);
+    //   ImGui::DockBuilderDockWindow("System Resources", dock_bottom);
 
-      ImGui::DockBuilderFinish(dockspace_id);
-    }
-
+    //   ImGui::DockBuilderFinish(dockspace_id);
+    // }
     // 渲染GUI
     view.render(model, controller);
 
@@ -603,6 +766,7 @@ inline int showUI() {
   // 清理资源
   ImGui_ImplOpenGL3_Shutdown();
   ImGui_ImplGlfw_Shutdown();
+  ImPlot::DestroyContext();
   ImGui::DestroyContext();
   glfwDestroyWindow(window);
   glfwTerminate();

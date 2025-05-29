@@ -33,50 +33,52 @@ ZTEST_F(Performance, MemoryAlloc, unsafe) {
   EXPECT_EQ(6, add(2, 3));
   return ZState::z_success;
 }
-void createSingleTestCase() {
-  // Use TestBuilder to construct test
-  auto test =
-      TestFactory::createTest("AdditionTest",                // Test name
-                              ZType::z_safe,                 // Execution type
-                              "Test addition functionality", // Description
-                              add, 2, 3 // Function and arguments
-                              )
-          .setExpectedOutput(5) // Set expected result
-          .beforeAll([]() {     // Setup hook
-            std::cout << "Setting up single test..." << std::endl;
-          })
-          .afterEach([]() { // Teardown hook
-            std::cout << "Cleaning up after test..." << std::endl;
-          })
-          .withDescription("Verify basic addition")
-          .registerTest()
-          .build(); // Register with test
-}
-void createTestSuite() {
-  // Create individual test cases
-  auto test1 = TestFactory::createTest("Addition", ZType::z_safe, "", add, 2, 2)
-                   .setExpectedOutput(4)
-                   .build();
+// void createSingleTestCase() {
+//   // Use TestBuilder to construct test
+//   auto test =
+//       TestFactory::createTest("AdditionTest",                // Test name
+//                               ZType::z_safe,                 // Execution
+//                               type "Test addition functionality", //
+//                               Description add, 2, 3 // Function and arguments
+//                               )
+//           .setExpectedOutput(5) // Set expected result
+//           .beforeAll([]() {     // Setup hook
+//             std::cout << "Setting up single test..." << std::endl;
+//           })
+//           .afterEach([]() { // Teardown hook
+//             std::cout << "Cleaning up after test..." << std::endl;
+//           })
+//           .withDescription("Verify basic addition")
+//           .registerTest()
+//           .build(); // Register with test
+// }
+// void createTestSuite() {
+//   // Create individual test cases
+//   auto test1 = TestFactory::createTest("Addition", ZType::z_safe, "", add, 2,
+//   2)
+//                    .setExpectedOutput(4)
+//                    .build();
 
-  auto test2 =
-      TestFactory::createTest("Subtraction", ZType::z_safe, "", subtract, 5, 3)
-          .setExpectedOutput(2)
-          .build();
+//   auto test2 =
+//       TestFactory::createTest("Subtraction", ZType::z_safe, "", subtract, 5,
+//       3)
+//           .setExpectedOutput(2)
+//           .build();
 
-  // Create test suite
-  auto suite =
-      ZTestSuiteFactory::createSuite("MathOperations", ZType::z_safe,
-                                     "Test math operations")
-          .addTest(std::move(test1))
-          .addTest(std::move(test2))
-          .beforeAll([]() {
-            std::cout << "Global setup for all tests in suite" << std::endl;
-          })
-          .afterEach(
-              []() { std::cout << "Cleanup after each test" << std::endl; })
-          .addToRegistry()
-          .build(); // Register the
-}
+//   // Create test suite
+//   auto suite =
+//       ZTestSuiteFactory::createSuite("MathOperations", ZType::z_safe,
+//                                      "Test math operations")
+//           .addTest(std::move(test1))
+//           .addTest(std::move(test2))
+//           .beforeAll([]() {
+//             std::cout << "Global setup for all tests in suite" << std::endl;
+//           })
+//           .afterEach(
+//               []() { std::cout << "Cleanup after each test" << std::endl; })
+//           .addToRegistry()
+//           .build(); // Register the
+// }
 ZBENCHMARK(Vector, PushBack) {
   std::vector<int> v;
   for (int i = 0; i < 10000; ++i) {
@@ -84,11 +86,21 @@ ZBENCHMARK(Vector, PushBack) {
   }
   return ZState::z_success;
 }
+ZTEST_F(MySuite, MyTest) {
+  BEFOREALL({ std::cout << "BeforeAll hook" << std::endl; });
+
+  AFTEREACH({ std::cout << "AfterEach hook" << std::endl; });
+
+  AFTERALL({ std::cout << "AfterAll hook" << std::endl; });
+
+  EXPECT_EQ(1 + 1, 2);
+  return ZState::z_success;
+}
 int main(int argc, char *argv[]) {
   std::vector<std::string> args(argv + 1, argv + argc);
   ZTestContext context;
   bool runGui = true;
-
+  logger.set_level(ZLogLevel::INFO);
   // Parse CLI args
   for (const auto &arg : args) {
     if (arg == "--no-gui") {
@@ -96,8 +108,8 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  createSingleTestCase();
-  createTestSuite();
+  // createSingleTestCase();
+  // createTestSuite();
 
   if (!runGui) {
     return runFromCLI(args, context);
