@@ -28,7 +28,7 @@ public:
   std::unique_ptr<ZTestBase> clone() const override {
     return std::make_unique<ZBenchMark>(*this);
   }
-
+  int getIterations() const { return _iterations; }
   ZState run() override {
     if (!_benchmark_func)
       return ZState::z_failed;
@@ -44,8 +44,9 @@ public:
     double avg_time = timer.getElapsedMilliseconds() / _iterations;
 
     ZTestResult result;
-    result.setResult(getName(), ZState::z_success, "", timer.getStartTime(),
-                     timer.getEndTime(), avg_time, _iterations);
+    result.setResult(getName(), ZType::z_benchmark, ZState::z_success, "",
+                     timer.getStartTime(), timer.getEndTime(), avg_time,
+                     _iterations);
 
     {
       //   std::lock_guard<std::mutex> lock(

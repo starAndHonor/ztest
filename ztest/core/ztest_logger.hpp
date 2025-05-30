@@ -131,6 +131,7 @@ public:
          << "                <th>Test Name</th>\n"
          << "                <th>Status</th>\n"
          << "                <th>Duration (ms)</th>\n"
+         << "                <th>Type</th>\n"
          << "                <th>Error Message</th>\n"
          << "            </tr>\n"
          << "        </thead>\n"
@@ -241,6 +242,7 @@ public:
 
       html << "            <tr>\n"
            << "                <td>" << name << "</td>\n"
+           << "                <td>" << toString(result.getType()) << "</td>\n"
            << "                <td><span class=\"status-badge " << statusClass
            << "\">" << statusText << "</span></td>\n"
            << "                <td>" << std::fixed << std::setprecision(2)

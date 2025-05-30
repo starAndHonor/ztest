@@ -5,6 +5,7 @@
 #include "core/ztest_base.hpp"
 #include "core/ztest_benchmark.hpp"
 #include "core/ztest_context.hpp"
+#include "core/ztest_dataregistry.hpp"
 #include "core/ztest_error.hpp"
 #include "core/ztest_macros.hpp"
 #include "core/ztest_parameterized.hpp"
@@ -37,7 +38,8 @@ public:
     auto tests = registry.takeTests();
 
     for (auto &test : tests) {
-      ZTestResult empty_reslut{test->getName(), 0.0, ZState::z_unknown, ""};
+      ZTestResult empty_reslut{test->getName(), ZType::z_unsafe, 0.0,
+                               ZState::z_unknown, ""};
       ZTestResultManager::getInstance().addResult(empty_reslut);
     }
     for (auto &&test : tests) {

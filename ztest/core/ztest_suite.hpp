@@ -52,8 +52,8 @@ public:
       runAfterEach();
 
       ZTestResult test_result;
-      test_result.setResult(getName(), result, "", case_timer.getStartTime(),
-                            case_timer.getEndTime(),
+      test_result.setResult(getName(), test->getType(), result, "",
+                            case_timer.getStartTime(), case_timer.getEndTime(),
                             case_timer.getElapsedMilliseconds());
       _results.push_back(test_result);
 

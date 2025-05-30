@@ -1,224 +1,176 @@
-// #pragma once
-// #include <fstream>
-// #include <iostream>
-// #include <sstream>
-// #include <stdexcept>
-// #include <string>
-// #include <vector>
+// ztest_utils.hpp
+#pragma once
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <variant> // 使用 variant 需要包含该头文件
+#include <vector>
 
-// /**
-//  * @class CSVStream
-//  * @brief A class for handling CSV file operations with type-safe data access
-//  */
-// class CSVStream {
-// public:
-//   /// @brief CSV metadata container
-//   struct CSVInfo {
-//     size_t totalRows; ///< Total number of rows including headers
-//     size_t dataRows;  ///< Data rows (excluding header if present)
-//     size_t columns;   ///< Number of columns
-//     std::vector<std::string> headers; ///< Column headers (if hasHeader=true)
-//   };
+// 定义 CSV 单元格支持的类型
+using CSVCell = std::variant<int, double, std::string>;
 
-//   /**
-//    * @brief Construct a new CSVStream object
-//    *
-//    * @param filename Path to CSV file
-//    * @param delimiter Field delimiter (default: ",")
-//    */
-//   explicit CSVStream(const std::string &filename,
-//                      const std::string &delimiter = ",")
-//       : filename_(filename), delimiter_(delimiter), mode_("overwrite") {}
+class CSVStream {
+public:
+  // 构造函数（增加 strictMode 参数用于严格类型检查）
+  CSVStream(const std::string &filename, const std::string &delimiter = ",",
+            bool strictMode = false)
+      : filename(filename), delimiter(delimiter), mode("overwrite"),
+        strictMode(strictMode) {}
 
-//   // File mode configuration
-//   CSVStream &setMode(const std::string &mode) {
-//     mode_ = mode;
-//     return *this;
-//   }
+  // 设置模式：覆写（overwrite）或追加（append）
+  CSVStream &setMode(const std::string &mode) {
+    this->mode = mode;
+    return *this;
+  }
 
-//   // Core I/O operations
-//   CSVStream &operator>>(std::vector<std::vector<std::string>> &data);
-//   CSVStream &operator<<(const std::vector<std::vector<std::string>> &data);
+  // -------------------- 原有字符串版本接口保持兼容 --------------------
+  // 重载 >> 运算符，用于读取CSV文件（字符串版本）
+  CSVStream &operator>>(std::vector<std::vector<std::string>> &data) {
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+      std::cerr << "Error opening file: " << filename << std::endl;
+      return *this;
+    }
 
-//   // Data analysis
-//   CSVInfo analyzeCSV(const std::vector<std::vector<std::string>> &data,
-//                      bool hasHeader = false) const;
+    std::string line;
+    while (std::getline(file, line)) {
+      std::vector<std::string> row;
+      std::stringstream ss(line);
+      std::string cell;
+      while (std::getline(ss, cell, delimiter[0])) {
+        row.push_back(cell);
+      }
+      data.push_back(row);
+    }
 
-//   // Type-safe data accessors
-//   template <typename T>
-//   std::vector<T>
-//   getRow(size_t rowIndex,
-//          const std::vector<std::vector<std::string>> &data) const;
+    file.close();
+    return *this;
+  }
 
-//   template <typename T>
-//   std::vector<T>
-//   getColumn(size_t colIndex,
-//             const std::vector<std::vector<std::string>> &data) const;
+  // 重载 << 运算符，用于写入CSV文件（字符串版本）
+  CSVStream &operator<<(const std::vector<std::vector<std::string>> &data) {
+    std::ofstream file;
+    if (mode == "append") {
+      file.open(filename, std::ios::app); // 追加模式
+    } else {
+      file.open(filename, std::ios::out | std::ios::trunc); // 覆写模式
+    }
 
-// private:
-//   // Internal enum for type-safe mode
-//   enum class FileOpenMode { Append, Overwrite };
+    if (!file.is_open()) {
+      std::cerr << "Error opening file: " << filename << std::endl;
+      return *this;
+    }
 
-//   // Internal helpers
-//   FileOpenMode getOpenMode() const;
-//   void validateData(const std::vector<std::vector<std::string>> &data) const;
+    for (const auto &row : data) {
+      for (size_t i = 0; i < row.size(); ++i) {
+        file << row[i];
+        if (i < row.size() - 1) {
+          file << delimiter;
+        }
+      }
+      file << "\n";
+    }
 
-//   std::string filename_;
-//   std::string delimiter_;
-//   std::string mode_;
-// };
+    file.close();
+    return *this;
+  }
 
-// // Implementation of core methods
-// inline CSVStream &
-// CSVStream::operator>>(std::vector<std::vector<std::string>> &data) {
-//   std::ifstream file(filename_);
-//   if (!file.is_open()) {
-//     throw std::runtime_error("Failed to open file for reading: " +
-//     filename_);
-//   }
+  // -------------------- 新增多类型版本接口 --------------------
+  // 重载 >> 运算符，用于读取CSV文件（多类型版本）
+  CSVStream &operator>>(std::vector<std::vector<CSVCell>> &data) {
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+      std::cerr << "Error opening file: " << filename << std::endl;
+      return *this;
+    }
 
-//   data.clear();
-//   std::string line;
-//   while (std::getline(file, line)) {
-//     std::vector<std::string> row;
-//     std::stringstream ss(line);
-//     std::string cell;
+    std::string line;
+    while (std::getline(file, line)) {
+      std::vector<CSVCell> row;
+      std::stringstream ss(line);
+      std::string cell;
+      while (std::getline(ss, cell, delimiter[0])) {
+        // 自动类型推断
+        if (isInteger(cell)) {
+          row.push_back(std::stoi(cell));
+        } else if (isDouble(cell)) {
+          row.push_back(std::stod(cell));
+        } else {
+          row.push_back(cell);
+        }
+      }
+      data.push_back(row);
+    }
 
-//     while (std::getline(ss, cell, delimiter_[0])) {
-//       row.push_back(cell);
-//     }
-//     data.push_back(row);
-//   }
+    file.close();
+    return *this;
+  }
 
-//   return *this;
-// }
+  // 重载 << 运算符，用于写入CSV文件（多类型版本）
+  CSVStream &operator<<(const std::vector<std::vector<CSVCell>> &data) {
+    std::ofstream file;
+    if (mode == "append") {
+      file.open(filename, std::ios::app);
+    } else {
+      file.open(filename, std::ios::out | std::ios::trunc);
+    }
 
-// inline CSVStream &
-// CSVStream::operator<<(const std::vector<std::vector<std::string>> &data) {
+    if (!file.is_open()) {
+      std::cerr << "Error opening file: " << filename << std::endl;
+      return *this;
+    }
 
-//   std::ofstream file;
-//   auto openMode = getOpenMode();
+    for (const auto &row : data) {
+      for (size_t i = 0; i < row.size(); ++i) {
+        // 使用 std::visit 处理 variant 类型
+        std::visit([&file](const auto &value) { file << value; }, row[i]);
 
-//   if (openMode == FileOpenMode::Append) {
-//     file.open(filename_, std::ios::app);
-//   } else {
-//     file.open(filename_, std::ios::out | std::ios::trunc);
-//   }
+        if (i < row.size() - 1) {
+          file << delimiter;
+        }
+      }
+      file << "\n";
+    }
 
-//   if (!file.is_open()) {
-//     throw std::runtime_error("Failed to open file for writing: " +
-//     filename_);
-//   }
+    file.close();
+    return *this;
+  }
 
-//   for (const auto &row : data) {
-//     for (size_t i = 0; i < row.size(); ++i) {
-//       file << row[i];
-//       if (i < row.size() - 1) {
-//         file << delimiter_;
-//       }
-//     }
-//     file << "\n";
-//   }
+private:
+  // 判断字符串是否为整数
+  static bool isInteger(const std::string &str) {
+    if (str.empty())
+      return false;
+    size_t pos = 0;
+    // 支持负数
+    if (str[0] == '-')
+      pos = 1;
+    // 检查所有字符是否为数字
+    while (pos < str.size()) {
+      if (!std::isdigit(str[pos]))
+        return false;
+      pos++;
+    }
+    return true;
+  }
 
-//   file.close();
-//   return *this;
-// }
+  // 判断字符串是否为浮点数
+  static bool isDouble(const std::string &str) {
+    try {
+      // 检查是否能成功转换为浮点数
+      size_t pos;
+      std::stod(str, &pos);
+      // 确保整个字符串都被转换
+      return pos == str.size();
+    } catch (...) {
+      return false;
+    }
+  }
 
-// // Private helper implementations
-// inline CSVStream::FileOpenMode CSVStream::getOpenMode() const {
-//   if (mode_ == "append") {
-//     return FileOpenMode::Append;
-//   } else if (mode_ == "overwrite") {
-//     return FileOpenMode::Overwrite;
-//   }
-//   throw std::invalid_argument("Invalid mode: must be 'append' or
-//   'overwrite'");
-// }
-
-// inline void CSVStream::validateData(
-//     const std::vector<std::vector<std::string>> &data) const {
-//   if (data.empty())
-//     return;
-
-//   size_t expectedColumns = data[0].size();
-//   for (size_t i = 1; i < data.size(); ++i) {
-//     if (data[i].size() != expectedColumns) {
-//       throw std::runtime_error("Inconsistent column count in CSV data at row
-//       " +
-//                                std::to_string(i + 1));
-//     }
-//   }
-// }
-
-// // Data analysis implementation
-// inline CSVStream::CSVInfo
-// CSVStream::analyzeCSV(const std::vector<std::vector<std::string>> &data,
-//                       bool hasHeader) const {
-
-//   CSVInfo info;
-//   info.totalRows = data.size();
-
-//   if (data.empty()) {
-//     info.columns = 0;
-//     info.dataRows = 0;
-//     return info;
-//   }
-
-//   validateData(data);
-//   info.columns = data[0].size();
-//   info.dataRows = hasHeader ? info.totalRows - 1 : info.totalRows;
-
-//   if (hasHeader && info.totalRows > 0) {
-//     info.headers = data[0];
-//   }
-
-//   return info;
-// }
-
-// // Template method implementations
-// template <typename T>
-// std::vector<T>
-// CSVStream::getRow(size_t rowIndex,
-//                   const std::vector<std::vector<std::string>> &data) const {
-
-//   if (rowIndex >= data.size()) {
-//     throw std::out_of_range("Row index out of range");
-//   }
-
-//   std::vector<T> result;
-//   for (const auto &cell : data[rowIndex]) {
-//     std::stringstream ss(cell);
-//     T value;
-//     ss >> value;
-//     if (ss.fail()) {
-//       throw std::runtime_error("Conversion failed for value: " + cell);
-//     }
-//     result.push_back(value);
-//   }
-//   return result;
-// }
-
-// template <typename T>
-// std::vector<T>
-// CSVStream::getColumn(size_t colIndex,
-//                      const std::vector<std::vector<std::string>> &data) const
-//                      {
-
-//   std::vector<T> result;
-//   for (size_t i = 0; i < data.size(); ++i) {
-//     if (colIndex >= data[i].size()) {
-//       throw std::out_of_range("Column index out of range in row " +
-//                               std::to_string(i + 1));
-//     }
-
-//     std::stringstream ss(data[i][colIndex]);
-//     T value;
-//     ss >> value;
-//     if (ss.fail()) {
-//       throw std::runtime_error("Conversion failed in row " +
-//                                std::to_string(i + 1));
-//     }
-//     result.push_back(value);
-//   }
-//   return result;
-// }
+  std::string filename;  // 文件名
+  std::string delimiter; // 分隔符，默认为逗号
+  std::string mode;      // 模式：overwrite 或 append，默认为 overwrite
+  bool strictMode; // 严格模式标志位（用于控制类型转换错误处理）
+};

@@ -50,7 +50,7 @@ public:
           timer.stop();
 
           ZTestResult result;
-          result.setResult(test_name, ZState::z_success, "",
+          result.setResult(test_name, ZType::z_safe, ZState::z_success, "",
                            timer.getStartTime(), timer.getEndTime(),
                            timer.getElapsedMilliseconds());
 
@@ -65,7 +65,8 @@ public:
 
         } catch (const std::exception &e) {
           ZTestResult result;
-          result.setResult(test_name, ZState::z_failed, e.what(), {}, {}, 0);
+          result.setResult(test_name, ZType::z_unsafe, ZState::z_failed,
+                           e.what(), {}, {}, 0);
 
           {
             std::lock_guard<std::mutex> lock(_result_mutex);
@@ -129,19 +130,20 @@ public:
       if (test->getType() == ZType::z_benchmark) {
         total++;
         const string &test_name = test->getName();
+        auto benchmark = dynamic_pointer_cast<ZBenchMark>(test);
         logger.debug("[Benchmark] Running test: " + test_name);
 
         try {
           ZTimer timer;
           timer.start();
-          test->run();
+          benchmark->run();
           timer.stop();
 
           ZTestResult result;
-          result.setResult(test_name, ZState::z_success, "",
+          result.setResult(test_name, ZType::z_benchmark, ZState::z_success, "",
                            timer.getStartTime(), timer.getEndTime(),
                            timer.getElapsedMilliseconds(),
-                           1000); // 假设默认迭代1000次
+                           benchmark->getIterations());
 
           {
             std::lock_guard<std::mutex> lock(_result_mutex);
@@ -155,7 +157,8 @@ public:
 
         } catch (const std::exception &e) {
           ZTestResult result;
-          result.setResult(test_name, ZState::z_failed, e.what(), {}, {}, 0, 1);
+          result.setResult(test_name, ZType::z_benchmark, ZState::z_failed,
+                           e.what(), {}, {}, 0, 1);
           {
             std::lock_guard<std::mutex> lock(_result_mutex);
             ZTestResultManager::getInstance().addResult(std::move(result));
@@ -169,6 +172,61 @@ public:
     }
 
     logger.debug("[Benchmark] Execution completed - Total: " +
+                 to_string(total) + " | Succeeded: " + to_string(succeeded) +
+                 " | Failed: " + to_string(failed));
+  }
+  /**
+   * @description: 串行运行所有参数化测试
+   * @return none
+   */
+  void runParameterizedInSerial() {
+    logger.debug("[Parameterized] Starting parameterized tests execution");
+    size_t total = 0, succeeded = 0, failed = 0;
+
+    for (auto &test : _test_list) {
+      if (test->getType() == ZType::z_param) {
+        total++;
+        const string &test_name = test->getName();
+        logger.debug("[Parameterized] Running test: " + test_name);
+
+        try {
+          ZTimer timer;
+          timer.start();
+          test->run();
+          timer.stop();
+
+          ZTestResult result;
+          result.setResult(test_name, ZType::z_param, ZState::z_success, "",
+                           timer.getStartTime(), timer.getEndTime(),
+                           timer.getElapsedMilliseconds());
+
+          {
+            std::lock_guard<std::mutex> lock(_result_mutex);
+            ZTestResultManager::getInstance().addResult(std::move(result));
+          }
+
+          succeeded++;
+          logger.info("[Parameterized] Test succeeded: " + test_name + " (" +
+                      to_string(timer.getElapsedMilliseconds()) + "ms)");
+
+        } catch (const std::exception &e) {
+          ZTestResult result;
+          result.setResult(test_name, ZType::z_param, ZState::z_failed,
+                           e.what(), {}, {}, 0);
+
+          {
+            std::lock_guard<std::mutex> lock(_result_mutex);
+            ZTestResultManager::getInstance().addResult(std::move(result));
+          }
+
+          failed++;
+          logger.error("[Parameterized] Test failed: " + test_name +
+                       " - Reason: " + e.what());
+        }
+      }
+    }
+
+    logger.debug("[Parameterized] Execution completed - Total: " +
                  to_string(total) + " | Succeeded: " + to_string(succeeded) +
                  " | Failed: " + to_string(failed));
   }
@@ -208,7 +266,7 @@ public:
     try {
       {
         lock_guard<mutex> lock(_result_mutex);
-        result.setResult(test_name, ZState::z_success, "",
+        result.setResult(test_name, test_ptr->getType(), ZState::z_success, "",
                          system_clock::time_point{}, system_clock::time_point{},
                          0.0);
       }
@@ -225,14 +283,16 @@ public:
           ZThreadPool::thread_id_to_string(std::this_thread::get_id()));
       {
         lock_guard<mutex> lock(_result_mutex);
-        result.setResult(test_ptr->getName(), test_state, "",
-                         local_timer.getStartTime(), local_timer.getEndTime(),
+        result.setResult(test_ptr->getName(), test_ptr->getType(), test_state,
+                         "", local_timer.getStartTime(),
+                         local_timer.getEndTime(),
                          local_timer.getElapsedMilliseconds());
       }
     } catch (const exception &e) {
       lock_guard<mutex> lock(_result_mutex);
-      result.setResult(test_ptr->getName(), ZState::z_failed, e.what(),
-                       local_timer.getStartTime(), local_timer.getEndTime(),
+      result.setResult(test_ptr->getName(), test_ptr->getType(),
+                       ZState::z_failed, e.what(), local_timer.getStartTime(),
+                       local_timer.getEndTime(),
                        local_timer.getElapsedMilliseconds());
       logger.error(result.getResultString(test_name) + "\n");
       logger.error(
@@ -253,6 +313,7 @@ public:
 
     runSafeInParallel();
     runBenchmarkOnly();
+    runParameterizedInSerial();
 
     if (generateHtml)
       logger.generateHtmlReport();

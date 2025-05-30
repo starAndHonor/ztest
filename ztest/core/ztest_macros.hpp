@@ -1,5 +1,5 @@
+
 #pragma once
-// TODO: 增加BENCHMARK
 #define EXPECT_EQ(expected, actual)                                            \
   do {                                                                         \
     auto &&_z_expected = (expected);                                           \
@@ -52,11 +52,18 @@
   }                                                                            \
   ZState suite_name##_##test_name::run()
 
-#define ZBENCHMARK(suite_name, test_name)                                      \
+#define ZBENCHMARK(...)                                                        \
+  ZBENCHMARK_IMPL(__VA_ARGS__, ZBENCHMARK3, ZBENCHMARK2)(__VA_ARGS__)
+#define ZBENCHMARK_IMPL(_1, _2, _3, NAME, ...) NAME
+#define ZBENCHMARK2(suite_name, test_name)                                     \
+  ZBENCHMARK3(suite_name, test_name, 1000)
+#define ZBENCHMARK3(suite_name, test_name, iterations)                         \
   class suite_name##_##test_name##_Benchmark : public ZBenchMark {             \
   public:                                                                      \
     suite_name##_##test_name##_Benchmark()                                     \
-        : ZBenchMark(#suite_name "." #test_name) {}                            \
+        : ZBenchMark(#suite_name "." #test_name) {                             \
+      withIterations(iterations);                                              \
+    }                                                                          \
     ZState run() override;                                                     \
     static void _register() {                                                  \
       ZTestRegistry::instance().addTest(                                       \
@@ -72,3 +79,35 @@
       used)) suite_name##_##test_name##_Benchmark_registrar_instance;          \
   }                                                                            \
   ZState suite_name##_##test_name##_Benchmark::run()
+
+#define ZTEST_P(suite, test, data_manager)                                     \
+  class suite##_##test                                                         \
+      : public ZTestParameterized<                                             \
+            typename std::decay_t<decltype(data_manager)>::Input,              \
+            typename std::decay_t<decltype(data_manager)>::Output> {           \
+  public:                                                                      \
+    using ParamType = std::decay_t<decltype(data_manager)>;                    \
+    suite##_##test()                                                           \
+        : ZTestParameterized(#suite "." #test, ZType::z_param, "",             \
+                             data_manager) {}                                  \
+    unique_ptr<ZTestBase> clone() const override {                             \
+      return make_unique<suite##_##test>(*this);                               \
+    }                                                                          \
+    ZState run_single_case() override;                                         \
+    static void _register() {                                                  \
+      ZTestRegistry::instance().addTest(make_unique<suite##_##test>());        \
+    }                                                                          \
+  };                                                                           \
+  namespace {                                                                  \
+  struct suite##_##test##_registrar {                                          \
+    suite##_##test##_registrar() { suite##_##test::_register(); }              \
+  } suite##_##test##_instance;                                                 \
+  }                                                                            \
+  ZState suite##_##test::run_single_case()
+
+#define EXPECT_EQ_FOREACH(expected_member, actual_member)                      \
+  do {                                                                         \
+    const auto &expected_val = expected_member;                                \
+    const auto &actual_val = actual_member;                                    \
+    EXPECT_EQ(expected_val, actual_val);                                       \
+  } while (0)

@@ -4,6 +4,7 @@
 #include <mutex>
 #include <ostream>
 #include <sstream>
+#include <vector>
 // ZTestResult是每一个测试的最终状态
 
 class ZTestResult {
@@ -16,16 +17,17 @@ private:
   string _error_msg;
   int _iterations;
   double _avg_time;
+  ZType _test_type;
 
 public:
   ZTestResult()
       : _test_name("unknown"), _duration(0.0), _test_state(ZState::z_failed),
         _error_msg("") {}
-  ZTestResult(string test_name, double duration, ZState state, string error_msg,
-              int iterations = 1)
+  ZTestResult(string test_name, ZType ztype, double duration, ZState state,
+              string error_msg, int iterations = 1)
       : _test_name(test_name), _duration(duration), _test_state(state),
         _error_msg(error_msg), _iterations(iterations),
-        _avg_time(duration / iterations) {}
+        _avg_time(duration / iterations), _test_type(ztype) {}
   bool operator==(const ZTestResult &other) const {
     return _test_name == other._test_name && _test_state == other._test_state;
   }
@@ -33,11 +35,12 @@ public:
    * @description: 设置测试结果
    * @return {*}
    */
-  void setResult(const string &name, ZState state, string error_msg,
-                 system_clock::time_point start_time,
+  void setResult(const string &name, ZType ztype, ZState state,
+                 string error_msg, system_clock::time_point start_time,
                  system_clock::time_point end_time, double used_time,
                  int iterations = 1) {
     _test_name = name;
+    _test_type = ztype;
     _test_state = state;
     _error_msg = error_msg;
     _start_time = start_time;
@@ -55,6 +58,7 @@ public:
   const double getAverageTime() const { return _avg_time; }
   const int getIterations() const { return _iterations; }
   ZState getState() const { return _test_state; }
+  ZType getType() const { return _test_type; }
 
   /**
    * @description: 获取测试结果字符串
