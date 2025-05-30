@@ -111,3 +111,32 @@
     const auto &actual_val = actual_member;                                    \
     EXPECT_EQ(expected_val, actual_val);                                       \
   } while (0)
+#define ZTEST_P_CSV(suite, test, csv_file_path)                                \
+  class suite##_##test                                                         \
+      : public ZTestParameterized<std::vector<CSVCell>, CSVCell> {             \
+  public:                                                                      \
+    suite##_##test()                                                           \
+        : ZTestParameterized(#suite "." #test, ZType::z_param, "",             \
+                             _csv_data_manager),                               \
+          _csv_data_manager(csv_file_path) {}                                  \
+    unique_ptr<ZTestBase> clone() const override {                             \
+      return make_unique<suite##_##test>(*this);                               \
+    }                                                                          \
+    ZState run_single_case() override;                                         \
+    static void _register() {                                                  \
+      ZTestRegistry::instance().addTest(make_unique<suite##_##test>());        \
+    }                                                                          \
+    std::vector<CSVCell> getInput() const { return _data.current().first; }    \
+    CSVCell getOutput() const { return _data.current().second; }               \
+                                                                               \
+  private:                                                                     \
+    ZTestCSVDataManager _csv_data_manager;                                     \
+    using Base = ZTestParameterized<std::vector<CSVCell>, CSVCell>;            \
+    using Base::_data;                                                         \
+  };                                                                           \
+  namespace {                                                                  \
+  struct suite##_##test##_registrar {                                          \
+    suite##_##test##_registrar() { suite##_##test::_register(); }              \
+  } suite##_##test##_instance;                                                 \
+  }                                                                            \
+  ZState suite##_##test::run_single_case()

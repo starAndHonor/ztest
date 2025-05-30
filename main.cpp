@@ -1,4 +1,5 @@
 #include "./ztest/gui.hpp"
+#include <any>
 int add(int a, int b) {
   sleep(1);
   return a + b;
@@ -101,20 +102,21 @@ ZTEST_P(ArithmeticSuite, SumTest, sum_test_data) {
   EXPECT_EQ_FOREACH(expected, actual);
   return ZState::z_success;
 }
-// 1. 注册CSV数据
-// ZTEST_DATA(MathTest, Add, "test_data.csv");
-
-// // 2. 定义测试逻辑
-// ZTEST_P_CSV(MathTest, Add) {
-//   auto [input, expected] = this->_data.current();
-//   // 示例：将输入转换为数值并验证
-//   double result = std::stod(input);
-//   double expectedValue = std::stod(expected);
-
-//   // 使用现有断言宏
-//   EXPECT_EQ(expectedValue, result);
-//   return ZState::z_success;
-// }
+ZTestDataManager<tuple<float, int>, float> sum_test_data2 = {
+    {{1.2, 2}, 3.2}, {{-1.0, 1}, 0.0}, {{10.1, 20}, 30.2}};
+ZTEST_P(ArithmeticSuite, SumTestfordiff, sum_test_data2) {
+  auto &&[inputs, expected] = _data.current();
+  float actual = std::get<0>(inputs) + std::get<1>(inputs);
+  EXPECT_EQ_FOREACH(expected, actual);
+  return ZState::z_success;
+}
+ZTEST_P_CSV(MathTests, AdditionTests, "data.csv") {
+  auto inputs = getInput();
+  auto expected = getOutput();
+  double actual = std::get<double>(inputs[0]) + std::get<double>(inputs[1]);
+  EXPECT_EQ(actual, std::get<double>(expected));
+  return ZState::z_success;
+}
 ZTEST_F(MySuite, MyTest) {
   BEFOREALL({ std::cout << "BeforeAll hook" << std::endl; });
 
@@ -136,9 +138,8 @@ int main(int argc, char *argv[]) {
       runGui = false;
     }
   }
-
-  // createSingleTestCase();
-  // createTestSuite();
+  createSingleTestCase();
+  createTestSuite();
 
   if (!runGui) {
     return runFromCLI(args, context);
