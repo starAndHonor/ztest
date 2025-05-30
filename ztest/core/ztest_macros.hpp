@@ -116,9 +116,10 @@
       : public ZTestParameterized<std::vector<CSVCell>, CSVCell> {             \
   public:                                                                      \
     suite##_##test()                                                           \
-        : ZTestParameterized(#suite "." #test, ZType::z_param, "",             \
-                             _csv_data_manager),                               \
-          _csv_data_manager(csv_file_path) {}                                  \
+        : ZTestParameterized(                                                  \
+              #suite "." #test, ZType::z_param, "",                            \
+              *ZDataRegistry::instance().load<ZTestCSVDataManager>(            \
+                  csv_file_path)) {}                                           \
     unique_ptr<ZTestBase> clone() const override {                             \
       return make_unique<suite##_##test>(*this);                               \
     }                                                                          \
@@ -130,7 +131,6 @@
     CSVCell getOutput() const { return _data.current().second; }               \
                                                                                \
   private:                                                                     \
-    ZTestCSVDataManager _csv_data_manager;                                     \
     using Base = ZTestParameterized<std::vector<CSVCell>, CSVCell>;            \
     using Base::_data;                                                         \
   };                                                                           \

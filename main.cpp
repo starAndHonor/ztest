@@ -138,6 +138,7 @@ int main(int argc, char *argv[]) {
       runGui = false;
     }
   }
+  ZDataRegistry::instance().setMaxSize(1);
   createSingleTestCase();
   createTestSuite();
 

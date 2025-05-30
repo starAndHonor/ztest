@@ -6,6 +6,12 @@
 #include <any>
 #include <exception>
 #include <functional>
+class ZDataManager {
+public:
+  virtual ~ZDataManager() = default;
+  virtual const std::string &getName() const = 0;
+  virtual size_t size() const = 0;
+};
 template <typename InputType, typename OutputType> class ZTestDataManager {
 
 public:
@@ -25,16 +31,23 @@ protected:
 };
 
 class ZTestCSVDataManager
-    : public ZTestDataManager<std::vector<CSVCell>, CSVCell> {
+    : public ZTestDataManager<std::vector<CSVCell>, CSVCell>,
+      public ZDataManager {
 public:
+  const std::string &getName() const override { return _filename; }
+
+  size_t size() const override { return _total_cases; }
   ZTestCSVDataManager(const string &filename)
       : ZTestDataManager({}), _filename(filename) {
-    // Load and parse CSV data
+    logger.debug("Initializing CSV data manager for: " + filename);
+
     CSVStream stream(filename);
     vector<vector<CSVCell>> csv_data;
     stream >> csv_data;
 
-    // Populate parent class's _data
+    logger.info("Loaded " + std::to_string(csv_data.size()) +
+                " rows from CSV file");
+
     _data.clear();
     for (auto &row : csv_data) {
       auto output = row.back();
@@ -42,8 +55,9 @@ public:
       _data.push_back(make_pair(row, output));
     }
     _total_cases = _data.size();
-  }
 
+    logger.debug("Processed " + std::to_string(_total_cases) + " test cases");
+  }
   // Keep all existing methods
   void printSummary() const {
     cout << "=== CSV Test Data Summary ===" << endl;
