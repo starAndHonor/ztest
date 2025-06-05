@@ -630,7 +630,6 @@ private:
         auto benchmarkit = &it;
         auto durations = benchmarkit->getIterationTimestamps();
         if (!durations.empty()) {
-          // 第一个图表：迭代时间折线图
           if (ImPlot::BeginPlot("##IterationTimes", "Iteration", "Time (ms)",
                                 ImVec2(-1, -1))) {
             ImPlot::PlotLine("Duration", durations.data(), durations.size());

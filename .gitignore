@@ -4,5 +4,7 @@ build/
 .VSCodeCounter/
 # MacOS Cache
 .DS_Store
-
+doc/
+final_report/
+share/
 
