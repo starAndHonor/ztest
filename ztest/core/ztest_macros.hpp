@@ -1,5 +1,6 @@
 
 #pragma once
+#include <cmath>
 #define EXPECT_EQ(expected, actual)                                            \
   do {                                                                         \
     auto &&_z_expected = (expected);                                           \
@@ -11,6 +12,29 @@
       _z_ass << _z_actual;                                                     \
       throw ZTestFailureException(this->getName(), _z_ess.str(),               \
                                   _z_ass.str());                               \
+    }                                                                          \
+  } while (0)
+#define EXPECT_NEAR(expected, actual, epsilon)                                 \
+  do {                                                                         \
+    auto &&_z_expected = (expected);                                           \
+    auto &&_z_actual = (actual);                                               \
+    auto &&_z_epsilon = (epsilon);                                             \
+    if (std::abs(_z_expected - _z_actual) > _z_epsilon) {                      \
+      std::ostringstream _z_ess;                                               \
+      _z_ess << _z_expected;                                                   \
+      std::ostringstream _z_ass;                                               \
+      _z_ass << _z_actual;                                                     \
+      std::ostringstream _z_eps;                                               \
+      _z_eps << _z_epsilon;                                                    \
+      std::ostringstream _z_diff;                                              \
+      _z_diff << std::abs(_z_expected - _z_actual);                            \
+      throw ZTestFailureException(                                             \
+          this->getName(),                                                     \
+          ("Expected value near " + _z_ess.str() + " ± " + _z_eps.str())       \
+              .c_str(),                                                        \
+          ("Actual value was " + _z_ass.str() + " (diff = " + _z_diff.str() +  \
+           ")")                                                                \
+              .c_str());                                                       \
     }                                                                          \
   } while (0)
 #define ASSERT_TRUE(cond)                                                      \
