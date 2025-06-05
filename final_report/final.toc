@@ -1,0 +1,35 @@
+\contentsline {section}{\numberline {1}系统需求分析}{2}{section.1}%
+\contentsline {subsection}{\numberline {1.1}系统背景与动机}{2}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}系统目标}{2}{subsection.1.2}%
+\contentsline {subsubsection}{\numberline {1.2.1}测试管理}{2}{subsubsection.1.2.1}%
+\contentsline {subsubsection}{\numberline {1.2.2}断言机制}{3}{subsubsection.1.2.2}%
+\contentsline {subsubsection}{\numberline {1.2.3}数据驱动测试}{4}{subsubsection.1.2.3}%
+\contentsline {subsubsection}{\numberline {1.2.4}测试执行器}{4}{subsubsection.1.2.4}%
+\contentsline {subsubsection}{\numberline {1.2.5}报告生成}{4}{subsubsection.1.2.5}%
+\contentsline {subsubsection}{\numberline {1.2.6}CLI接口}{5}{subsubsection.1.2.6}%
+\contentsline {subsubsection}{\numberline {1.2.7}GUI展示}{5}{subsubsection.1.2.7}%
+\contentsline {section}{\numberline {2}程序分析}{6}{section.2}%
+\contentsline {subsection}{\numberline {2.1} 系统关键问题}{6}{subsection.2.1}%
+\contentsline {subsubsection}{\numberline {2.1.1}提升测试运行效率}{6}{subsubsection.2.1.1}%
+\contentsline {subsubsection}{\numberline {2.1.2}语法糖的实现}{6}{subsubsection.2.1.2}%
+\contentsline {subsubsection}{\numberline {2.1.3}待测函数的自动类型推导}{6}{subsubsection.2.1.3}%
+\contentsline {subsection}{\numberline {2.2} 职责分配}{7}{subsection.2.2}%
+\contentsline {section}{\numberline {3}技术路线}{7}{section.3}%
+\contentsline {subsection}{\numberline {3.1}运行环境}{7}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}总体设计}{7}{subsection.3.2}%
+\contentsline {subsubsection}{\numberline {3.2.1}Ztest Core架构图}{7}{subsubsection.3.2.1}%
+\contentsline {subsubsection}{\numberline {3.2.2}GUI框架}{8}{subsubsection.3.2.2}%
+\contentsline {subsection}{\numberline {3.3}详细设计}{10}{subsection.3.3}%
+\contentsline {subsubsection}{\numberline {3.3.1}测试定义相关类}{10}{subsubsection.3.3.1}%
+\contentsline {subsubsection}{\numberline {3.3.2}测试注册相关类}{10}{subsubsection.3.3.2}%
+\contentsline {subsubsection}{\numberline {3.3.3}测试执行相关类}{10}{subsubsection.3.3.3}%
+\contentsline {subsubsection}{\numberline {3.3.4}结果管理相关类}{10}{subsubsection.3.3.4}%
+\contentsline {subsubsection}{\numberline {3.3.5}报告生成相关类}{10}{subsubsection.3.3.5}%
+\contentsline {subsubsection}{\numberline {3.3.6}工具模块相关类}{10}{subsubsection.3.3.6}%
+\contentsline {subsubsection}{\numberline {3.3.7}GUI模块相关类}{11}{subsubsection.3.3.7}%
+\contentsline {section}{\numberline {4}编程进度}{11}{section.4}%
+\contentsline {section}{\numberline {5}测试报告}{11}{section.5}%
+\contentsline {subsection}{\numberline {5.1}功能测试}{11}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}系统测试}{11}{subsection.5.2}%
+\contentsline {section}{\numberline {6}个人总结}{11}{section.6}%
+\contentsline {section}{\numberline {7}参考文献}{11}{section.7}%

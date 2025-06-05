@@ -18,6 +18,7 @@ private:
   int _iterations;
   double _avg_time;
   ZType _test_type;
+  std::vector<double> _iterationTimestamps;
 
 public:
   ZTestResult()
@@ -28,6 +29,8 @@ public:
       : _test_name(test_name), _duration(duration), _test_state(state),
         _error_msg(error_msg), _iterations(iterations),
         _avg_time(duration / iterations), _test_type(ztype) {}
+  virtual ~ZTestResult() = default; // Add this line
+
   bool operator==(const ZTestResult &other) const {
     return _test_name == other._test_name && _test_state == other._test_state;
   }
@@ -84,6 +87,13 @@ public:
     }
 
     return oss.str();
+  }
+
+  const std::vector<double> &getIterationTimestamps() const {
+    return _iterationTimestamps;
+  }
+  void setIterationTimestamps(const std::vector<double> &timestamps) {
+    _iterationTimestamps = timestamps;
   }
 };
 

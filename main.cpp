@@ -87,7 +87,7 @@ ZBENCHMARK(Vector, PushBack) {
 }
 ZBENCHMARK(Matrix, PushBack, 20000) {
   std::vector<int> v;
-  for (int i = 0; i < 100000; ++i) {
+  for (int i = 0; i < 1000; ++i) {
     v.push_back(random());
   }
   return ZState::z_success;

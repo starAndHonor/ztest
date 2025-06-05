@@ -138,13 +138,13 @@ public:
           timer.start();
           benchmark->run();
           timer.stop();
-
+          // cout << benchmark->getIterationTimestamps().size() << endl;
           ZTestResult result;
           result.setResult(test_name, ZType::z_benchmark, ZState::z_success, "",
                            timer.getStartTime(), timer.getEndTime(),
                            timer.getElapsedMilliseconds(),
                            benchmark->getIterations());
-
+          result.setIterationTimestamps(benchmark->getIterationTimestamps());
           {
             std::lock_guard<std::mutex> lock(_result_mutex);
             ZTestResultManager::getInstance().addResult(std::move(result));
@@ -270,24 +270,60 @@ public:
                          system_clock::time_point{}, system_clock::time_point{},
                          0.0);
       }
+
       logger.debug(
           "Starting test [" + test_case->getName() + "] on thread: " +
           ZThreadPool::thread_id_to_string(std::this_thread::get_id()));
+
+      // 调用 BeforeAll
       test_case->runBeforeAll();
+
       local_timer.start();
-      auto test_state = test_case->run();
-      local_timer.stop();
+
+      if (test_case->getType() == ZType::z_benchmark) {
+        // 特别处理 benchmark 测试
+        auto benchmark = dynamic_pointer_cast<ZBenchMark>(test_case);
+        if (!benchmark) {
+          throw std::runtime_error("Failed to cast to ZBenchMark");
+        }
+
+        benchmark->run(); // 执行基准测试，会自动填充迭代时间戳
+
+        // 获取迭代次数和时间戳
+        const auto &timestamps = benchmark->getIterationTimestamps();
+        int iterations = timestamps.size();
+
+        // 构造最终结果
+        local_timer.stop();
+        {
+          lock_guard<mutex> lock(_result_mutex);
+          result.setResult(test_name, test_ptr->getType(), ZState::z_success,
+                           "", local_timer.getStartTime(),
+                           local_timer.getEndTime(),
+                           local_timer.getElapsedMilliseconds(), iterations);
+          result.setIterationTimestamps(timestamps); // 设置所有迭代时间
+        }
+
+      } else {
+        // 其他类型测试正常执行一次
+        auto test_state = test_case->run();
+        local_timer.stop();
+
+        {
+          lock_guard<mutex> lock(_result_mutex);
+          result.setResult(test_name, test_ptr->getType(), test_state, "",
+                           local_timer.getStartTime(), local_timer.getEndTime(),
+                           local_timer.getElapsedMilliseconds());
+        }
+      }
+
+      // 调用 AfterAll
       test_case->runAfterAll();
+
       logger.debug(
           "Finished test [" + test_case->getName() + "] on thread: " +
           ZThreadPool::thread_id_to_string(std::this_thread::get_id()));
-      {
-        lock_guard<mutex> lock(_result_mutex);
-        result.setResult(test_ptr->getName(), test_ptr->getType(), test_state,
-                         "", local_timer.getStartTime(),
-                         local_timer.getEndTime(),
-                         local_timer.getElapsedMilliseconds());
-      }
+
     } catch (const exception &e) {
       lock_guard<mutex> lock(_result_mutex);
       result.setResult(test_ptr->getName(), test_ptr->getType(),
@@ -300,6 +336,7 @@ public:
           ZThreadPool::thread_id_to_string(std::this_thread::get_id()) + ": " +
           e.what());
     }
+
     lock_guard<mutex> lock(_result_mutex);
     ZTestResultManager::getInstance().addResult(std::move(result));
   }
@@ -310,7 +347,6 @@ public:
   void runAllTests(bool generateHtml = true, bool generateJson = true,
                    bool generateJUnit = true) {
     runUnsafeOnly();
-
     runSafeInParallel();
     runBenchmarkOnly();
     runParameterizedInSerial();

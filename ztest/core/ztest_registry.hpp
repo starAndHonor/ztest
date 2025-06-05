@@ -4,6 +4,7 @@
 #include "ztest_types.hpp"
 #include <mutex>
 #include <thread>
+#include <vector>
 // ZTestRegistry定义了测试注册中心，用于gtest类似语法。
 class ZTestRegistry {
 private:

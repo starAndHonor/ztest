@@ -21,7 +21,7 @@
       throw ZTestFailureException(this->getName(), "true", _z_oss.str());      \
     }                                                                          \
   } while (0)
-
+// TODO: 修正HOOKS运行的位置
 #define BEFOREALL(func) addBeforeAll([this]() { func; })
 #define AFTEREACH(func) addAfterEach([this]() { func; })
 #define AFTERALL(func) addAfterAll([this]() { func; })
@@ -64,7 +64,10 @@
         : ZBenchMark(#suite_name "." #test_name) {                             \
       withIterations(iterations);                                              \
     }                                                                          \
-    ZState run() override;                                                     \
+    ZState run_single_case() override;                                         \
+    std::unique_ptr<ZTestBase> clone() const override {                        \
+      return std::make_unique<suite_name##_##test_name##_Benchmark>(*this);    \
+    }                                                                          \
     static void _register() {                                                  \
       ZTestRegistry::instance().addTest(                                       \
           std::make_unique<suite_name##_##test_name##_Benchmark>());           \
@@ -78,7 +81,7 @@
   } __attribute__((                                                            \
       used)) suite_name##_##test_name##_Benchmark_registrar_instance;          \
   }                                                                            \
-  ZState suite_name##_##test_name##_Benchmark::run()
+  ZState suite_name##_##test_name##_Benchmark::run_single_case()
 
 #define ZTEST_P(suite, test, data_manager)                                     \
   class suite##_##test                                                         \

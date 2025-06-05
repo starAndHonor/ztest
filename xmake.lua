@@ -15,4 +15,5 @@ target("test_gui")
         ".",
         "./ztest/lib/implot" 
     )
+    set_toolchains("clang")
     set_languages("c++20")

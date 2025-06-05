@@ -625,13 +625,20 @@ private:
       ImGui::Text("Average Time: %.6f ms", it.getAverageTime());
       ImGui::Text("Iterations: %d", it.getIterations());
 
-      if (!it.getErrorMsg().empty()) {
-        ImGui::Separator();
-        ImGui::TextColored(ImVec4(1, 0, 0, 1), "Error Message:");
-        ImGui::TextWrapped("%s", it.getErrorMsg().c_str());
+      if (it.getType() == ZType::z_benchmark) {
+
+        auto benchmarkit = &it;
+        auto durations = benchmarkit->getIterationTimestamps();
+        if (!durations.empty()) {
+          // 第一个图表：迭代时间折线图
+          if (ImPlot::BeginPlot("##IterationTimes", "Iteration", "Time (ms)",
+                                ImVec2(-1, -1))) {
+            ImPlot::PlotLine("Duration", durations.data(), durations.size());
+            ImPlot::EndPlot();
+          }
+        }
       }
     }
-
     ImGui::End();
   }
 

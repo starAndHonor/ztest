@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ztest - Modern Testing Framework</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --success-color: #27ae60;
+            --fail-color: #c0392b;
+            --background-color: #f8f9fa;
+            --card-background: #ffffff;
+            --text-color: #2d3436;
+            --muted-text: #7f8c8d;
+            --border-radius: 8px;
+            --transition: all 0.3s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background: var(--background-color);
+        }
+
+        header {
+            background: var(--primary-color);
+            color: white;
+            padding: 2rem 1rem;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        .hero {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .hero h1 {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            color: white;
+        }
+
+        .hero p {
+            font-size: 1.2rem;
+            max-width: 800px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .feature-card {
+            background: var(--card-background);
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .feature-card h3 {
+            margin-bottom: 1rem;
+            color: var(--primary-color);
+        }
+
+        .feature-card p {
+            color: var(--muted-text);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            margin-top: 3rem;
+        }
+
+        .stat-card {
+            background: var(--accent-color);
+            color: white;
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            text-align: center;
+        }
+
+        .stat-card h4 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card p {
+            opacity: 0.9;
+        }
+
+        .cta {
+            text-align: center;
+            margin-top: 3rem;
+        }
+
+        .cta a {
+            display: inline-block;
+            background: var(--success-color);
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: var(--border-radius);
+            text-decoration: none;
+            font-weight: bold;
+            transition: background 0.3s ease;
+        }
+
+        .cta a:hover {
+            background: #218c55;
+        }
+
+        footer {
+            background: #ecf0f1;
+            padding: 2rem 1rem;
+            text-align: center;
+            margin-top: 3rem;
+            color: var(--muted-text);
+        }
+
+        @media (max-width: 768px) {
+            .stat-card {
+                grid-column: span 3;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container hero">
+            <h1>ztest</h1>
+            <p>A modern, feature-rich testing framework for C++ development that helps you write better tests, faster.</p>
+        </div>
+    </header>
+
+    <main>
+        <div class="container">
+            <section class="features">
+                <div class="feature-card">
+                    <h3>Comprehensive Testing</h3>
+                    <p>Support for unit testing, benchmarking, parameterized tests, and performance analysis in one unified framework.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Modern UI</h3>
+                    <p>Intuitive graphical interface with real-time resource monitoring, detailed test visualization, and dark/light theme support.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Powerful Features</h3>
+                    <p>Parallel execution, test filtering/sorting, setup/teardown hooks, and comprehensive reporting (HTML, JSON, JUnit).</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Extensible Architecture</h3>
+                    <p>Modular design with plugin system, LRU caching for test data, and customizable test runners.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Benchmark Tools</h3>
+                    <p>Integrated benchmarking with detailed performance metrics and comparison capabilities.</p>
+                </div>
+                <div class="feature-card">
+                    <h3>Test Management</h3>
+                    <p>Robust test registry, result management, and data-driven testing capabilities.</p>
+                </div>
+            </section>
+
+            <section class="stats">
+                <div class="stat-card">
+                    <h4>10+</h4>
+                    <p>Years of Development</p>
+                </div>
+                <div class="stat-card">
+                    <h4>1000+</h4>
+                    <p>Test Cases</p>
+                </div>
+                <div class="stat-card">
+                    <h4>10+</h4>
+                    <p>Contributors</p>
+                </div>
+            </section>
+
+            <section class="cta">
+                <h2>Get Started Today</h2>
+                <p>Join our community and start writing better tests with ztest</p>
+                <a href="https://github.com/yourusername/ztest">View on GitHub</a>
+            </section>
+        </div>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 ztest Project. All rights reserved.</p>
+            <p>Maintained by Your Organization</p>
+        </div>
+    </footer>
+</body>
+</html>
