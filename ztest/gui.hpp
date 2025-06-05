@@ -1,7 +1,19 @@
 #pragma once
+// #define WIN32_LEAN_AND_MEAN
+// #define NOMINMAX
+#include <windows.h>  // 最先包含
+#include <pdh.h>
+#pragma comment(lib, "pdh.lib")  // Windows 平台需链接 PDH 库
+// 取消定义ERROR宏，以避免与枚举值冲突
+#ifdef ERROR
+#undef ERROR
+#endif
+
+
+
 #include <glad/glad.h>
 
-// #include "./lib/implot/implot.h"
+#include "./lib/implot/implot.h"
 #include "core/ztest_base.hpp"
 #include "core/ztest_benchmark.hpp"
 #include "core/ztest_context.hpp"
@@ -22,6 +34,11 @@
 #include "implot.h"
 #include <GLFW/glfw3.h>
 #include <map>
+#include <algorithm> // for std::min_element, std::max_element
+#include <numeric>   // for std::accumulate
+//用于实现windows监视cpu的库
+#include <pdh.h>
+#include <pdhmsg.h>
 class ZTestModel {
 public:
   std::atomic<bool> _is_running{false};
@@ -130,12 +147,97 @@ private:
 class ZTestView {
 public:
   void render(ZTestModel &model, ZTestController &controller) {
+    handleShortcuts(model, controller);
+    
+    // 渲染快捷键配置窗口
+    if (_showShortcutConfig) {
+        renderShortcutConfig();
+    }
     renderMainMenu();
+        // 获取屏幕尺寸
+    ImVec2 screen_size = ImGui::GetIO().DisplaySize;
+
+    // 测试列表（左侧50%）
+    ImGui::SetNextWindowPos(ImVec2(0, 40)); // 保持20px菜单栏偏移
+    ImGui::SetNextWindowSize(ImVec2(
+        screen_size.x * 0.5f,  // 改为50%宽度
+        screen_size.y - 100      // 总高度减去菜单栏和状态栏
+    ));
     renderTestList(model, controller);
-    renderStatusBar(model);
+
+    // 测试详情（右侧50%的上半部分）
+    ImGui::SetNextWindowPos(ImVec2(
+        screen_size.x * 0.5f,  // 从50%位置开始
+        20                     // 保持20px菜单栏偏移
+    ));
+    ImGui::SetNextWindowSize(ImVec2(
+        screen_size.x * 0.5f,  // 50%宽度
+        (screen_size.y - 60) * 0.6f // 高度的60%
+    ));
     renderDetailsWindow(model);
+
+    // 资源监控（右侧50%的下半部分）
+    ImGui::SetNextWindowPos(ImVec2(
+        screen_size.x * 0.5f,  // 从50%位置开始
+        20 + (screen_size.y - 60) * 0.6f // 接在详情窗口下方
+    ));
+    ImGui::SetNextWindowSize(ImVec2(
+        screen_size.x * 0.5f,  // 50%宽度
+        (screen_size.y - 60) * 0.4f // 高度的40%
+    ));
     renderResourceMonitor();
+
+    renderStatusBar(model);
+
+  //   if (_flashRunAllButton) {
+  //     _flashTimer += ImGui::GetIO().DeltaTime;
+  //     if (_flashTimer > 0.5f) {
+  //         _flashRunAllButton = false;
+  //     }
+  // }
   }
+  void handleShortcuts(ZTestModel& model, ZTestController& controller)//新添加6.2-w
+  {
+    if (!_shortcutsEnabled) return;
+    ImGuiIO& io = ImGui::GetIO();
+    
+    // ctrl-r - 运行所有测试
+    if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_R) 
+        && !model._is_running) {
+        
+        controller.runAllTests();
+    }
+    
+    // Ctrl+Enter - 运行选中测试
+      
+    if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_Enter) && 
+        !model._selected_test.empty() && !model._is_running) {
+        controller.runSelectedTest(model._selected_test);
+    }
+    
+    // // Ctrl+F - 聚焦到搜索框
+    // if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_F)) {
+    //     _focusSearchBox = true;
+    // }
+}
+  
+  void renderShortcutConfig()//新添加6.2-w
+  {
+    if (!ImGui::Begin("Shortcut Configuration", &_showShortcutConfig)) {
+      ImGui::End();
+      return;
+    }
+  
+  ImGui::Text("Configure keyboard shortcuts:");
+  ImGui::Separator();
+  
+  ImGui::Text("Run All Tests:");
+  ImGui::SameLine();
+  ImGui::Text("Ctrl+R");
+  ImGui::Text("Run Selected Test:");
+  ImGui::SameLine();
+  ImGui::Text("Ctrl+Enter");
+  }//finish
 
   void setWindow(GLFWwindow *window) { _window = window; }
   void applyTheme() {
@@ -169,6 +271,16 @@ public:
   }
 
 private:
+  // 快捷键相关变量
+    //bool _focusSearchBox = false;
+    bool _shortcutsEnabled = true;
+    bool _showShortcutConfig = false;
+    //bool _flashRunAllButton = false;
+    float _flashTimer = 0.0f;
+    // 添加新方法
+    //void handleShortcuts(ZTestModel& model, ZTestController& controller);
+    //void renderShortcutConfig();
+
   std::queue<float> _cpu_history;
   std::queue<float> _memory_history;
   const size_t maxHistorySize = 60;
@@ -182,8 +294,46 @@ private:
     }
     return result;
   }
-  // Platform-specific resource monitoring
+
   float getCpuUsage() {
+  #ifdef _WIN32
+  #pragma comment(lib, "pdh.lib")
+    static PDH_HQUERY cpuQuery = nullptr;
+    static PDH_HCOUNTER cpuTotal = nullptr;
+    
+    // 初始化查询和计数器
+    if (cpuQuery == nullptr) {
+        if (PdhOpenQuery(nullptr, 0, &cpuQuery) != ERROR_SUCCESS) {
+            return 0.0f;
+        }
+        
+        if (PdhAddCounterA(cpuQuery, "\\Processor(_Total)\\% Processor Time", 0, &cpuTotal) != ERROR_SUCCESS) {
+            PdhCloseQuery(cpuQuery);
+            cpuQuery = nullptr;
+            return 0.0f;
+        }
+        
+        // 第一次调用需要收集数据
+        PdhCollectQueryData(cpuQuery);
+        Sleep(1000); // 等待1秒收集数据
+    }
+    
+    // 收集当前数据
+    if (PdhCollectQueryData(cpuQuery) != ERROR_SUCCESS) {
+        return 0.0f;
+    }
+    
+    // 获取计数器值
+    PDH_FMT_COUNTERVALUE counterVal;
+    if (PdhGetFormattedCounterValue(cpuTotal, PDH_FMT_DOUBLE, nullptr, &counterVal) != ERROR_SUCCESS) {
+        return 0.0f;
+    }
+    
+    // 返回CPU使用率百分比
+    return static_cast<float>(counterVal.doubleValue);
+  #else
+// 原始的Linux实现
+float getCpuUsage() {
     std::ifstream stat("/proc/stat");
     std::string line;
     std::getline(stat, line);
@@ -203,9 +353,27 @@ private:
     prev_total = total;
     prev_idle = idle;
     return usage;
-  }
+}
+#endif
+}
 
+  // ��ȡ�ڴ�ʹ����
   float getMemoryUsage() {
+    #ifdef _WIN32
+    MEMORYSTATUSEX memStatus;
+    memStatus.dwLength = sizeof(MEMORYSTATUSEX);
+    if (GlobalMemoryStatusEx(&memStatus)) {
+        unsigned __int64 totalMemory = memStatus.ullTotalPhys;
+        unsigned __int64 availableMemory = memStatus.ullAvailPhys;
+
+        if (totalMemory > 0) {
+            unsigned __int64 usedMemory = totalMemory - availableMemory;
+            return static_cast<float>(usedMemory * 100) / static_cast<float>(totalMemory);
+        }
+    }
+    return 0.0f;
+#else
+    // Linux �汾
     std::ifstream meminfo("/proc/meminfo");
     std::string line;
     long total = 0, free = 0, buffers = 0, cached = 0;
@@ -227,6 +395,7 @@ private:
       return (float)(used * 100) / total;
     }
     return 0.0f;
+#endif
   }
 
   enum class Theme { Dark, Light };
@@ -254,12 +423,30 @@ private:
       }
       if (ImGui::BeginMenu("Options")) {
         ImGui::MenuItem("Enable Resource Monitoring", "", &_enable_monitoring);
+        if (ImGui::BeginMenu("Shortcuts Configuration...", &_showShortcutConfig)) {  // true表示始终保持菜单打开
+                // 快捷键配置面板直接作为子菜单内容
+                ImGui::Separator();
+                ImGui::TextColored(ImVec4(0,1,1,1), "Configure keyboard shortcuts:");
+                ImGui::Separator();
+                
+                // sameline 后面是空格长度-6.4-w
+                ImGui::Text("Run All Tests"); 
+                ImGui::SameLine(300); ImGui::TextColored(ImVec4(1,1,0,1), "Ctrl+R");
+                
+                ImGui::Text("Run Selected Test");
+                ImGui::SameLine(300); ImGui::TextColored(ImVec4(1,1,0,1), "Ctrl+Enter");
+                
+                ImGui::EndMenu();
+        }
+            
         ImGui::EndMenu();
       }
+
       ImGui::EndMainMenuBar();
     }
   }
   void renderResourceMonitor() {
+    
     ImGui::Begin("System Resources");
 
     std::vector<float> cpuData = queueToVector(_cpu_history);
@@ -312,8 +499,9 @@ private:
     return 0.0f;
   }
   void renderTestList(ZTestModel &model, ZTestController &controller) {
+    
+    //ImGui::SetNextWindowSize(ImVec2(640.0f, 720.0f), ImGuiCond_Always);
     ImGui::Begin("Test Cases", nullptr);
-
     // Filter controls
     static char filterText[128] = "";
     ImGui::InputTextWithHint("##Filter", "Search tests...", filterText,
@@ -359,15 +547,27 @@ private:
       ImGui::SetCursorPosX(ImGui::GetCursorPosX() + horizontalOffset);
 
       // Run All button
+    //   if (_flashRunAllButton) {
+    //     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 1.0f, 0.0f, 0.5f));
+    //     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.0f, 1.0f, 0.0f, 0.7f));
+    //     ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.0f, 1.0f, 0.0f, 0.9f));
+    // }
+
       ImGui::PushStyleColor(
           ImGuiCol_Button, model._is_running
                                ? ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled)
                                : ImVec4(0.25f, 0.65f, 0.25f, 1.0f));
       if (ImGui::Button("Run All", ImVec2(buttonWidth, 30)) &&
           !model._is_running) {
+            // _flashRunAllButton = true;
+            // _flashTimer = 0.0f;
         controller.runAllTests();
       }
       ImGui::PopStyleColor();
+
+    //   if (_flashRunAllButton) {
+    //     ImGui::PopStyleColor(3);
+// }
 
       ImGui::SameLine();
 
@@ -451,6 +651,16 @@ private:
     ImGuiListClipper clipper;
     clipper.Begin(suiteMap.size());
 
+      ImGui::Text("Test Name");
+      ImGui::SameLine();
+      ImGui::Dummy(ImVec2(285, 0));
+      ImGui::SameLine();
+      ImGui::Text("Status");
+      ImGui::SameLine();
+      ImGui::Dummy(ImVec2(20, 0));
+      ImGui::SameLine();
+      ImGui::Text("Time (ms)");
+
     while (clipper.Step()) {
       auto it = suiteMap.begin();
       std::advance(it, clipper.DisplayStart);
@@ -474,14 +684,6 @@ private:
                                 ImGuiTableFlags_BordersInnerV |
                                     ImGuiTableFlags_SizingFixedFit |
                                     ImGuiTableFlags_RowBg)) {
-
-            ImGui::TableSetupColumn("Test Name",
-                                    ImGuiTableColumnFlags_WidthStretch);
-            ImGui::TableSetupColumn("Status", ImGuiTableColumnFlags_WidthFixed,
-                                    100);
-            ImGui::TableSetupColumn("Time (ms)",
-                                    ImGuiTableColumnFlags_WidthFixed, 80);
-            ImGui::TableHeadersRow();
 
             for (const auto &test : tests) {
               ImGui::TableNextRow();
@@ -529,10 +731,10 @@ private:
     ImGui::End();
   }
   void renderTestCaseRow(const ZTestResult &test, ZTestModel &model) {
-    // 添加缩进
+    // ��������
     ImGui::Indent(10.0f);
 
-    // 测试名称列
+    // ����������
     ImGui::Selectable(test.getName().c_str(),
                       model._selected_test == test.getName());
     if (ImGui::IsItemClicked())
@@ -540,14 +742,14 @@ private:
     ImGui::Unindent(10.0f);
     ImGui::NextColumn();
 
-    // 状态列
+    // ״̬��
     ImGui::TextColored(getStateColor(test.getState()), "%s",
                        test.getState() == ZState::z_unknown
                            ? "Not Run"
                            : toString(test.getState()));
     ImGui::NextColumn();
 
-    // 时间列
+    // ʱ����
     ImGui::Text("%.2f", test.getUsedTime());
     ImGui::NextColumn();
   }
@@ -594,7 +796,7 @@ private:
 
       ImVec4 memColor = (mem_usage > 80.0f)   ? ImVec4(1, 0, 0, 1)
                         : (mem_usage > 50.0f) ? ImVec4(1, 1, 0, 1)
-                                              : ImVec4(0, 1, 0, 1);
+                                             : ImVec4(0, 1, 0, 1);
 
       ImGui::Text("Total: %d  Passed: %d  Failed: %d", test_cases.size(),
                   passed, failed);
@@ -607,7 +809,7 @@ private:
       ImGui::SameLine();
       ImGui::TextColored(memColor, " Mem: %.1f%%", mem_usage);
     }
-
+  
     ImGui::End();
   }
 
@@ -615,35 +817,21 @@ private:
     ImGui::Begin("Test Details");
 
     if (!model._selected_test.empty()) {
-      auto it =
-          ZTestResultManager::getInstance().getResult(model._selected_test);
+        auto& result_manager = ZTestResultManager::getInstance();
+        auto it = result_manager.getResult(model._selected_test);
 
-      ImGui::Text("Test Name: %s", it.getName().c_str());
-      ImGui::TextColored(getStateColor(it.getState()), "Status: %s",
-                         toString(it.getState()));
-      ImGui::Text("Total Time: %.2f ms", it.getUsedTime());
-      ImGui::Text("Average Time: %.6f ms", it.getAverageTime());
-      ImGui::Text("Iterations: %d", it.getIterations());
-
-      if (it.getType() == ZType::z_benchmark) {
-
-        auto benchmarkit = &it;
-        auto durations = benchmarkit->getIterationTimestamps();
-        if (!durations.empty()) {
-          if (ImPlot::BeginPlot("##IterationTimes", "Iteration", "Time (ms)",
-                                ImVec2(-1, -1))) {
-            ImPlot::PlotLine("Duration", durations.data(), durations.size());
-            ImPlot::EndPlot();
-          }
-        }
-      }
+        // 基础信息展示
+        ImGui::Text("Test Name: %s", it.getName().c_str());
+        ImGui::TextColored(getStateColor(it.getState()), "Status: %s", toString(it.getState()));
+        ImGui::Text("Total Time: %.2f ms", it.getUsedTime());
+        ImGui::Text("Average Time: %.6f ms", it.getAverageTime());
+        ImGui::Text("Iterations: %d", it.getIterations());
     }
     ImGui::End();
-  }
+}
 
   GLFWwindow *_window = nullptr;
 };
-
 static void glfw_error_callback(int error, const char *description) {
   fprintf(stderr, "GLFW Error %d: %s\n", error, description);
 }
@@ -683,7 +871,7 @@ inline int showUI() {
 #endif
 
   GLFWwindow *window =
-      glfwCreateWindow(1280, 720, "ztest gui", nullptr, nullptr);
+      glfwCreateWindow(2560, 1440, "ztest gui", nullptr, nullptr);
 
   if (window == nullptr) {
     logger.error("Failed to create GLFW window");
@@ -705,28 +893,33 @@ inline int showUI() {
   IMGUI_CHECKVERSION();
   ImGui::CreateContext();
   ImPlot::CreateContext();
-  ImGuiIO &io = ImGui::GetIO();
-  (void)io;
-  io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+  static ImGuiIO& io = ImGui::GetIO();
+  // (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+  // 由于 ImGuiIO 没有 KeyMap 成员，使用 io.KeyMap 会报错，从 ImGui 1.87 开始使用 io.KeyMap 已被弃用，应使用 io.AddKeyEvent
+  io.AddKeyEvent(ImGuiKey_R, GLFW_KEY_R);
+  // 由于 ImGuiIO 没有 KeyMap 成员，从 ImGui 1.87 开始使用 io.KeyMap 已被弃用，改用 io.AddKeyEvent
+  io.AddKeyEvent(ImGuiKey_Enter, GLFW_KEY_ENTER);
+    // io.KeyMap[ImGuiKey_F] = GLFW_KEY_F; // ?疑点。疑似可以去除
   view.applyTheme();
   ImFont *font = io.Fonts->AddFontFromFileTTF(
       "Hack-Regular.ttf", 25.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
   // Initialize ImGui backends
   ImGui_ImplGlfw_InitForOpenGL(window, true);
   ImGui_ImplOpenGL3_Init(glsl_version); // Use the actual glsl_version
-                                        // variable 初始化测试上下文
-  // InitializeTestContext(testContext); // 添加测试用例
-  // 初始化MVC组件
+                                        // variable ��ʼ������������
+  // InitializeTestContext(testContext); // ���Ӳ�������
+  // ��ʼ��MVC���
 
   view.setWindow(window);
   model.initializeFromRegistry(testContext);
   bool first_time = true;
-  // 主循环
+  // ��ѭ��
 
   while (!glfwWindowShouldClose(window)) {
     glfwPollEvents();
 
-    // 开始ImGui帧
+    // ��ʼImGui֡
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -757,10 +950,10 @@ inline int showUI() {
 
     //   ImGui::DockBuilderFinish(dockspace_id);
     // }
-    // 渲染GUI
+    // ��ȾGUI
     view.render(model, controller);
 
-    // 渲染绘制
+    // ��Ⱦ����
     ImGui::Render();
     int display_w, display_h;
     glfwGetFramebufferSize(window, &display_w, &display_h);
@@ -771,7 +964,7 @@ inline int showUI() {
     glfwSwapBuffers(window);
   }
 
-  // 清理资源
+  // ������Դ
   ImGui_ImplOpenGL3_Shutdown();
   ImGui_ImplGlfw_Shutdown();
   ImPlot::DestroyContext();
@@ -797,12 +990,12 @@ inline int runFromCLI(const std::vector<std::string> &args,
                 << "  --report=formats Generate reports (json,html,junit)\n"
                 << "  --no-gui         Run in headless mode\n";
       return 0;
-      // TODO: 实现report部分逻辑
+      // TODO: ʵ��report�����߼�
     } else if (arg == "--run-all") {
       runAll = true;
     } else if (arg.substr(0, 10) == "--run-test") {
       selectedTest = arg.substr(11);
-      // TODO: CLI指定运行指定测试
+      // TODO: CLIָ������ָ������
     } else if (arg == "--list-tests") {
       for (const auto &test : ZTestRegistry::instance().takeTests()) {
         std::cout << test->getName() << "\n";
