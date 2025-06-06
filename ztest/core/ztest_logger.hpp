@@ -97,7 +97,8 @@ public:
    */
   void
   generateHtmlReport(const std::string &reportFilename = "test_report.html",
-                     const std::string &test_file = "") {
+                     const std::string &test_file = "",
+                     bool generateAI = true) {
     // First get test results for both report and AI prompt
     auto results = ZTestResultManager::getInstance().getResults();
     int passed = 0, failed = 0;
@@ -142,7 +143,7 @@ public:
         prompt += "### 测试文件内容\n" + test_file_content + "\n\n";
       }
     }
-    prompt += "\n请提供以下内容：\n"
+    prompt += "\n请提供以下内容(不多于100字)：\n"
               "1. 识别失败的根本原因\n"
               "2. 提供修复建议\n"
               "3. 指出高风险测试用例\n"
@@ -152,9 +153,13 @@ public:
     std::string jsonReport = generateJsonReport(); // For internal use only
     std::cout << "prompt: " << prompt << "\n";
     // auto api_key = getenv("DASHSCOPE_API_KEY");
-    std::string api_key = "sk-7d6389df8ba540feb5578eb9103c9f0d";
+    std::string api_key = getApiKey();
     std::cout << "api_key: " << api_key << std::endl;
-    auto ai_advice = call_qwen_api(prompt, api_key, "qwen-turbo", 0.7);
+    std::string ai_advice;
+    if (generateAI)
+      ai_advice = call_qwen_api(prompt, api_key);
+    else
+      ai_advice = "No AI advice";
     std::cout << "ai_advice: " << ai_advice << "\n";
 
     // Escape special characters for JS safety

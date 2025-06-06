@@ -20,6 +20,7 @@
 #include "imgui_impl_opengl3.h"
 #include "imgui_internal.h"
 #include "implot.h"
+#include "lib/imgui_markdown/imgui_markdown.h"
 #include <GLFW/glfw3.h>
 #include <map>
 class ZTestModel {
@@ -129,12 +130,24 @@ private:
 
 class ZTestView {
 public:
+  // ZTestView() {
+
+  //   ImGuiIO &io = ImGui::GetIO();
+  //   // _markdown_config.linkCallback = [](const char *url, const char *title,
+  //   //                                    size_t titleLength) {
+  //   //   std::cout << "Link clicked: " << std::string(title, titleLength) <<
+  //   "
+  //   //   ("
+  //   //             << url << ")" << std::endl;
+  //   // };
+  // }
   void render(ZTestModel &model, ZTestController &controller) {
     renderMainMenu();
     renderTestList(model, controller);
     renderStatusBar(model);
     renderDetailsWindow(model);
     renderResourceMonitor();
+    renderAIAnalysisWindow(model);
   }
 
   void setWindow(GLFWwindow *window) { _window = window; }
@@ -173,6 +186,9 @@ private:
   std::queue<float> _memory_history;
   const size_t maxHistorySize = 60;
   bool _enable_monitoring = true;
+  bool show_ai_window = false;
+  ImGui::MarkdownConfig _markdown_config;
+
   std::vector<float> queueToVector(const std::queue<float> &q) {
     std::vector<float> result;
     std::queue<float> temp = q;
@@ -254,6 +270,8 @@ private:
       }
       if (ImGui::BeginMenu("Options")) {
         ImGui::MenuItem("Enable Resource Monitoring", "", &_enable_monitoring);
+        ImGui::MenuItem("Show AI helper", "", &show_ai_window);
+
         ImGui::EndMenu();
       }
       ImGui::EndMainMenuBar();
@@ -310,6 +328,133 @@ private:
       }
     }
     return 0.0f;
+  }
+  void renderAIAnalysisWindow(ZTestModel &model) {
+    static std::string ai_prompt =
+        "Please analyze the test result and suggest improvements.";
+    static std::string test_file_path;
+    static std::string ai_response;
+    static std::atomic<bool> is_analyzing{false};
+    static std::string error_message;
+
+    if (!show_ai_window)
+      return;
+
+    ImGui::Begin("AI Analysis", &show_ai_window);
+
+    // Test info display
+    if (!model._selected_test.empty()) {
+      auto test_result =
+          ZTestResultManager::getInstance().getResult(model._selected_test);
+      ImGui::Text("Selected Test: %s", test_result.getName().c_str());
+      ImGui::TextColored(getStateColor(test_result.getState()), "Status: %s",
+                         toString(test_result.getState()));
+      ImGui::Text("Used Time: %.2f ms", test_result.getUsedTime());
+      ImGui::Separator();
+    }
+
+    static char file_path_buffer[1024] = ""; // Adjust size as needed
+    static char prompt_buffer[4096] = "";    // Adjust size as needed
+
+    // Sync buffers with strings before rendering
+    strncpy(file_path_buffer, test_file_path.c_str(),
+            sizeof(file_path_buffer) - 1);
+    file_path_buffer[sizeof(file_path_buffer) - 1] = '\0';
+
+    strncpy(prompt_buffer, ai_prompt.c_str(), sizeof(prompt_buffer) - 1);
+    prompt_buffer[sizeof(prompt_buffer) - 1] = '\0';
+
+    // Use ImGui InputText with char buffer
+    ImGui::Text("File Path:");
+    ImGui::InputTextWithHint("##file_path", "file path", file_path_buffer,
+                             sizeof(file_path_buffer),
+                             ImGuiInputTextFlags_EnterReturnsTrue);
+    ImGui::Text("Prompt:");
+    ImGui::InputTextMultiline("##prompt", prompt_buffer, sizeof(prompt_buffer),
+                              ImVec2(-1, 100));
+    // Sync back to std::string after rendering
+    test_file_path = file_path_buffer;
+    ai_prompt = prompt_buffer;
+    // Analyze button
+    if (ImGui::Button("Analyze", ImVec2(-1, 30)) && !is_analyzing) {
+      if (!model._selected_test.empty()) {
+        is_analyzing = true;
+        ai_response.clear();
+        error_message.clear();
+
+        // Start AI analysis in background thread
+        std::thread([&, test_name = model._selected_test, prompt = ai_prompt,
+                     file_path = test_file_path]() {
+          try {
+            // Get test result data
+            auto test_result =
+                ZTestResultManager::getInstance().getResult(test_name);
+
+            // Build context string
+            std::ostringstream oss;
+            oss << "Test Name: " << test_result.getName() << "\n"
+                << "Status: " << toString(test_result.getState()) << "\n"
+                << "Used Time: " << test_result.getUsedTime() << " ms\n"
+                << "Iterations: " << test_result.getIterations() << "\n";
+
+            // Add file content if path provided
+            if (!file_path.empty()) {
+              oss << "\n=== TEST FILE CONTENT ===\n";
+              oss << readFileContent(file_path);
+              oss << "\n=== END OF FILE ===\n";
+            }
+
+            // Add user prompt
+            oss << "Prompt: " << prompt;
+
+            // Call AI API
+            ai_response = call_qwen_api(
+                oss.str() + "The result should be in commonmark format.",
+                getApiKey());
+
+          } catch (const std::exception &e) {
+            error_message = std::string("Error: ") + e.what();
+          } catch (...) {
+            error_message = "Unknown error during AI analysis";
+          }
+          is_analyzing = false;
+        }).detach();
+
+      } else {
+        error_message = "No test selected for analysis";
+      }
+    }
+
+    // Display status and results
+    if (is_analyzing) {
+      ImGui::Text("Analyzing...");
+      ImGui::ProgressBar(0.0f, ImVec2(-1, 0));
+    }
+
+    if (!error_message.empty()) {
+      ImGui::TextColored(ImVec4(1, 0, 0, 1), "%s", error_message.c_str());
+    }
+
+    if (!ai_response.empty()) {
+      ImGui::Separator();
+      // ImGui::TextWrapped("%s", ai_response.c_str());
+      ImGui::PushTextWrapPos();
+      ImGui::Markdown(ai_response.c_str(), ai_response.size(),
+                      _markdown_config);
+      ImGui::PopTextWrapPos();
+    }
+
+    ImGui::End();
+  }
+  std::string readFileContent(const std::string &path) {
+    std::ifstream file(path);
+    if (!file.is_open()) {
+      throw std::runtime_error("Failed to open file: " + path);
+    }
+
+    std::ostringstream oss;
+    oss << file.rdbuf();
+    return oss.str();
   }
   void renderTestList(ZTestModel &model, ZTestController &controller) {
     ImGui::Begin("Test Cases", nullptr);

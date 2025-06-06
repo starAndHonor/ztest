@@ -271,3 +271,10 @@ inline std::string call_qwen_api(const std::string &prompt,
   }
   return "无法初始化CURL";
 }
+inline std::string getApiKey() {
+  const char *key = std::getenv("DASHSCOPE_API_KEY");
+  if (!key) {
+    throw std::runtime_error("API key not found in environment variables");
+  }
+  return key;
+}

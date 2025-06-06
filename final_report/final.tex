@@ -11,6 +11,7 @@
 \usepackage{caption} % 用于添加表格标题
 \usepackage[table]{xcolor} % 用于设置表格颜色
 \usepackage{float}
+\usepackage{subcaption}
 \usepackage{tabularx}
 \usepackage{tcolorbox}
 \tcbuselibrary{listings}
@@ -18,6 +19,7 @@
 \usepackage[dvipsnames]{xcolor}
 \usepackage{tikz}
 \usepackage{hyperref} 
+\usepackage{framed}
 \usetikzlibrary{positioning} % 加载positioning库
 \renewcommand{\refname}{Reference}
 
@@ -40,7 +42,7 @@
     % numbers=left, % 显示行号在左边
     % numbersep=2em, % 设置行号的具体位置
     % numberstyle=\footnotesize, % 缩小行号
-    frame=single, % 边框
+    % frame=single, % 边框
     framesep=1em, % 设置代码与边框的距离
 	tabsize=2, % 设置tab键的宽度为2个空格
     showstringspaces=false, % 不显示字符串中的空格
@@ -127,20 +129,25 @@
     \label{fig:test types }
 \end{figure}
 我们提供类似Google Test的宏简化测试定义：
-\begin{lstlisting}[language=C++]
+\begin{framed}
+    \begin{lstlisting}[language=C++]
 ZTEST_F(SuiteName, TestName, safe/unsafe) { ... } //define a test 
 ZBENCHMARK(SuiteName, TestName, iterations) { ... } // define a benchmark
 ZTEST_P(SuiteName, TestName, data) { ... }  //define a parameterized test
 ZTEST_P_CSV(SuiteName, TestName, "data.csv") { ... } // define a parameterized test with csv data
 \end{lstlisting}
+\end{framed}
 
 同时,我们能够链式定义测试用例：
-\begin{lstlisting}[language=C++]
+\begin{framed}
+    \begin{lstlisting}[language=C++]
 auto test_case = TestFactory::createTest("Add", ZType::Z_SAFE, "", add, 2, 3)
                  .setExpectedOutput(5)
                  .beforeAll([]() { logger.info("Init\n"); })          
                  .afterEach([]() { logger.info("Clean\n"); }).build();
                 \end{lstlisting}
+\end{framed}
+
 \subsubsection{断言机制}
 断言机制用于验证测试用例的预期结果是否正确。框架提供了多种断言宏,如 \textbf{EXPECT\_EQ} 和 \textbf{ASSERT\_TRUE},支持在测试中快速验证条件。
 主要提供以下断言：
@@ -181,7 +188,8 @@ ZTest实现了参数测试并以从csv导入和解析数据的方式实现了数
     \small
 \end{figure}
 \subsubsection{CLI接口}
-\begin{lstlisting}
+\begin{framed}
+    \begin{lstlisting}
 Usage: executor_name [OPTIONS] 
 Options: 
 --help                         Show help 
@@ -192,6 +200,7 @@ Options:
 --run-parameterized            Run parameterized tests
 --run-test-case TEST_CASE      Run a specific test case
 \end{lstlisting}
+\end{framed}
 
 \subsubsection{GUI展示}
 可以通过GUI展示测试结果,筛选测试结果,观看系统资源状态,查看某个测试的运行细节等功能。
@@ -202,7 +211,15 @@ Options:
     \label{fig:gui}
     \small
 \end{figure}
-
+\subsubsection{AI智能诊断功能}
+通过调用qwen3的接口，实现智能诊断功能，同时可以在GUI界面上获取对于某一个测试用例的具体分析。在报告中可以得到
+\begin{enumerate}
+    \item 识别失败根本原因
+    \item 提供修复建议
+    \item 指出高风险测试用例
+    \item 评估整体测试覆盖率
+    \item 提出系统稳定性改进建议
+\end{enumerate}
 \newpage
 \section{程序分析}
 \subsection{ 系统关键问题}
@@ -215,7 +232,7 @@ Options:
     \caption{ task type}
     \label{fig:task types }
 \end{figure}
-对于测试所需时间长,更见关注结果正确性,且线程安全的任务,ZTest从pytest中借鉴,在C++测试框架体系中引入了多线程测试执行。截至目前,没有任意一个主流C++单元测试引入了这一机制。
+对于测试所需时间长,更见关注结果正确性,且线程安全的任务,ZTest在C++测试框架体系中引入了多线程测试执行，直接融入测试框架，而不是google-parallel这样的第三方工具，实现了更高细粒度的控制。
 同时,引入数据驱动测试并使用缓存加速使得大规模的单元测试的定义和执行速度大大提升,意义重大。
 \subsubsection{语法糖的实现}
 如何让用户愿意使用单元测试框架？其关键在于语法定义的简易性。我们使用一系列复杂的宏定义来实现语法糖,从而简化用户的定义。
@@ -256,7 +273,7 @@ Options:
 % 在这里描述系统的总体设计
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.8\textwidth]{img/corearch.png} % 假设logo.png是学校标志的图片文件
+    \includegraphics[width=0.8\textwidth]{img/core.png} % 假设logo.png是学校标志的图片文件
     \caption{ ztest design}
     \label{fig:ztest design }
 \end{figure}
@@ -265,6 +282,7 @@ ZTest的核心架构流程开始于测试定义阶段，测试(包括ZTest Suite
 注册完成后,测试会被发送到测试执行器,该执行器根据测试的类型采取不同的测试策略,对于安全测试采用并行测试策略,而对于其他类型的测试则采用串行测试策略。
 在对数据驱动的测试的执行过程中,数据驱动模块通过ZDataRegistry（带有LRU机制的缓存）来管理外部数据,如CSV文件,以支持测试的进行。
 测试完成后,结果管理器ZTestResultManager负责收集和处理测试结果,并将这些结果导出为HTML、JSON或XML格式,以便于报告和进一步分析。
+在导出为HTML格式时由AI(qwen turbo)进行测试诊断，并融入到HTML测试报告中。
 此外,整个测试流程还支持与持续集成/持续部署（CI/CD）系统的集成,使得测试结果可以自动地反馈到开发流程中,从而提高软件开发的效率和质量。
 \begin{figure}[H]
     \centering
@@ -284,85 +302,402 @@ GUI框架使用MCV架构开发，其中Model层负责数据处理，其中包含
 \subsection{详细设计}
 \subsubsection{测试定义相关类}
 \begin{itemize}
+    \item \texttt{ZTestInterface}:  测试接口，定义测试执行框架。
     \item \texttt{ZTestBase} (ztest\_base.hpp): 抽象测试基类，封装通用属性与生命周期钩子。采用模板方法模式定义测试执行框架，通过虚函数表实现策略模式，利用钩子函数实现装饰器模式扩展。
     \item \texttt{ZTestSingleCase} (ztest\_singlecase.hpp): 单例测试实现，使用模板方法模式执行测试逻辑，配合TestFactory体现工厂模式，支持链式配置符合建造者模式特征。
+    \item \texttt{ZTestSuite}(ztest\_suite.hpp): 测试套件类，继承自ZTestBase，用于组织测试用例，实现模板方法模式，支持钩子函数扩展。
     \item \texttt{ZBenchMark} (ztest\_benchmark.hpp): 基准测试类，继承ZTestBase并重写run()方法，通过迭代执行测试函数实现基准测试。
     \item \texttt{ZTestParameterized} (ztest\_parameterized.hpp): 参数化测试基类，采用组合模式封装测试数据，通过run()方法实现数据驱动测试框架。
+    \item \texttt{宏定义系统} (ztest\_macros.hpp): 通过宏定义实现语法糖，采用工厂模式自动生成测试类，利用命名连接技术实现自动化注册。
 \end{itemize}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width = \textwidth]{img/c1.png} % 假设logo.png是学校标志的图片文件
+    \caption{ ztest class}
+    \label{fig:ztest class }
+\end{figure}
 
 \subsubsection{测试注册相关类}
 \begin{itemize}
     \item \texttt{ZTestRegistry} (ztest\_registry.hpp): 单例模式实现的全局注册中心，管理测试用例集合并保障线程安全的注册/获取操作。
-    \item \texttt{宏定义系统} (ztest\_macros.hpp): 通过宏定义实现语法糖，采用工厂模式自动生成测试类，利用命名连接技术实现自动化注册。
 \end{itemize}
-
+\begin{figure}[H]
+    \centering
+    \includegraphics[width = 0.7\textwidth]{img/c2.png} % 假设logo.png是学校标志的图片文件
+    \caption{ ztest class}
+    \label{fig:ztest class }
+\end{figure}
 \subsubsection{测试执行相关类}
 \begin{itemize}
     \item \texttt{ZTestContext} (ztest\_context.hpp): 测试执行上下文，采用策略模式根据测试类型选择执行策略，通过线程池模式实现并行测试执行。
     \item \texttt{ZThreadPool} (ztest\_thread.hpp): 线程池实现对象池模式，使用生产者-消费者模式管理任务队列，通过future/promise机制实现异步执行监控。
 \end{itemize}
-
+\begin{figure}[H]
+    \centering
+    \includegraphics[width = 0.7\textwidth]{img/c3.png} % 假设logo.png是学校标志的图片文件
+    \caption{ ztest class}
+    \label{fig:ztest class }
+\end{figure}
+\subsubsection{数据管理相关类}
+\begin{itemize}
+    \item \texttt{ZDataRegistry} (ztest\_dataregistry.hpp): 数据缓存管理器，采用单例模式全局访问，通过LRU策略实现缓存淘汰。
+    \item \texttt{ZDataManager}(ztest\_parameterized.hpp): 是数据管理类的抽象基类，提供数据管理接口，实现类似python中的迭代器的功能。
+    \item \texttt{ZTestDataManager} (ztest\_parameterized.hpp)泛型类，实现了由用户在代码中指定的数据类型的测试数据管理功能。
+    \item \texttt{ZTestCSVDataManager}(ztest\_parameterized.hpp) 双继承于\texttt{ZTestDataManager}和\texttt{ZDataManager}，实现了从csv文件中读取测试数据功能并处理成便于参数化测试的形式。
+\end{itemize}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width = \textwidth]{img/c4.png} % 假设logo.png是学校标志的图片文件
+    \caption{ ztest class}
+    \label{fig:ztest class }
+\end{figure}
 \subsubsection{结果管理相关类}
 \begin{itemize}
     \item \texttt{ZTestResult} (ztest\_result.hpp): 值对象模式的测试结果类，封装测试状态、耗时等不可变数据。
     \item \texttt{ZTestResultManager} (ztest\_result.hpp): 单例模式实现的结果管理器，采用责任链模式处理结果存储与查询。
 \end{itemize}
-
+\begin{figure}[H]
+    \centering
+    \includegraphics[width = 0.7\textwidth]{img/c5.png} % 假设logo.png是学校标志的图片文件
+    \caption{ ztest class}
+    \label{fig:ztest class }
+\end{figure}
 \subsubsection{报告生成相关类}
 \begin{itemize}
     \item \texttt{ZLogger} (ztest\_logger.hpp): 多格式报告生成器，应用模板方法模式定义报告生成流程，支持HTML/JSON/JUnit报告格式。
 \end{itemize}
-
+\begin{figure}[H]
+    \centering
+    \includegraphics[width =0.7\textwidth]{img/c6.png} % 假设logo.png是学校标志的图片文件
+    \caption{ ztest class}
+    \label{fig:ztest class }
+\end{figure}
 \subsubsection{工具模块相关类}
 \begin{itemize}
     \item \texttt{ZTimer} (ztest\_timer.hpp): RAII模式实现的计时器，封装时间测量功能。
-    \item \texttt{ZDataRegistry} (ztest\_dataregistry.hpp): 数据缓存管理器，采用单例模式全局访问，通过LRU策略实现缓存淘汰。
+    \item \texttt{CSVStream}(ztest\_utils.hpp)：实现了类似标准输入输出库的CSV流操作，支持读，写，打印基本信息。
 \end{itemize}
-
+\begin{figure}[H]
+    \centering
+    \includegraphics[width = \textwidth]{img/c7.png} % 假设logo.png是学校标志的图片文件
+    \caption{ ztest class}
+    \label{fig:ztest class }
+\end{figure}
 \subsubsection{GUI模块相关类}
 \begin{itemize}
     \item \texttt{ZTestModel} (gui.hpp): MVC架构中的Model层，采用观察者模式监听测试状态变化。
     \item \texttt{ZTestController} (gui.hpp): MVC架构中的Controller层，实现命令模式封装测试执行操作。
     \item \texttt{ZTestView} (gui.hpp): MVC架构中的View层，使用桥接模式分离界面元素与实现。
 \end{itemize}
-
+\begin{figure}[H]
+    \centering
+    \includegraphics[width = \textwidth]{img/c8.png} % 假设logo.png是学校标志的图片文件
+    \caption{ ztest class}
+    \label{fig:ztest class }
+\end{figure}
 \section{编程进度}
 \begin{table}[H]
     \centering
     \begin{tabular}{|l|l|}
         \toprule
-        \textbf{任务阶段}                         & \textbf{计划}                       \\ \midrule
-        \textbf{确定主题} 2024.04.26-2024.05.03   & 调查主题,提交提案。                        \\ \midrule
-        \textbf{实现核心代码} 2024.05.03-2024.05.05 & 实现了GUI和Safe test和Unsafe test的执行逻辑 \\ \midrule
-        \textbf{重大性能优化} 2024.05.05-2024.05.08 & 线程池优化                             \\ \midrule
-        功能优化 2024.05.08-2024.05.11            & 完善JSON，HTML输出，JUnit格式输出,CI集成      \\ \midrule
-        功能优化 2024.05.11-2024.05.13            & GUI引入了imgui Docking功能             \\ \midrule
-        功能优化 2024.05.13-2024.05.15            & 增加CLI                             \\ \midrule
-        \textbf{重大功能优化} 2024.05.15-2024.05.24 & 增加BENCHMARK测试                     \\ \midrule
-        功能优化 2024.05.24-2024.05.25            & 增加了设备状态监测和可视化                     \\ \midrule
-        \textbf{重大功能优化} 2024.05.25-2024.05.28 & 增加了参数化测试并增加了数据驱动                  \\ \midrule
-        \textbf{重大性能优化} 2024.05.28-2024.06.02 & 增加了对数据的缓存和LRU缓存淘汰技术               \\ \midrule
-        总结工作 2024.6.02-2024.06.08             & 跨平台移植 \& 报告撰写                     \\
+        \textbf{任务阶段}                          & \textbf{计划}                       \\ \midrule
+        \textbf{确定主题} 2024.04.26-2024.05.03    & 调查主题,提交提案。                        \\ \midrule
+        \textbf{实现核心代码} 2024.05.03-2024.05.05  & 实现了GUI和Safe test和Unsafe test的执行逻辑 \\ \midrule
+        \textbf{重大性能优化} 2024.05.05-2024.05.08  & 线程池优化                             \\ \midrule
+        功能优化 2024.05.08-2024.05.11             & 完善JSON，HTML输出，JUnit格式输出,CI集成      \\ \midrule
+        功能优化 2024.05.11-2024.05.13             & GUI引入了imgui Docking功能             \\ \midrule
+        功能优化 2024.05.13-2024.05.15             & 增加CLI                             \\ \midrule
+        \textbf{重大功能优化} 2024.05.15-2024.05.24  & 增加BENCHMARK测试                     \\ \midrule
+        功能优化 2024.05.24-2024.05.25             & 增加了设备状态监测和可视化                     \\ \midrule
+        \textbf{重大功能优化} 2024.05.25-2024.05.28  & 增加了参数化测试并增加了数据驱动                  \\ \midrule
+        \textbf{重大性能优化} 2024.05.28-2024.06.02  & 增加了对数据的缓存和LRU缓存淘汰技术               \\ \midrule
+        \textbf{重大功能优化}  2024.06.02-2024.06.07 & 添加了AI诊断                           \\ \midrule
+        总结工作 2024.6.02-2024.06.08              & 跨平台移植 \& 报告撰写                     \\
         \bottomrule
     \end{tabular}
     \caption{编程进度}
 \end{table}
 
 \section{测试报告}
-\subsection{功能测试}
-% 在这里填写功能测试的内容
+\subsection{功能测试\&系统测试}
+\subsubsection{断言功能测试}
+该测试旨在验证 EXPECT\_EQ、EXPECT\_NEAR 和 ASSERT\_TRUE 等断言宏在成功和失败情况下的行为。通过设计不同的测试用例，可以检查这些断言是否能够正确地识别预期结果与实际结果之间的匹配情况，从而确保测试框架的断言功能能够可靠地工作。
+\begin{framed}
+    \begin{lstlisting}[language=C++]
+int add(int a, int b) { return a + b; }
+double subtract(double a, double b) { return a - b; }
+ZTEST_F(ASSERTION, FailedEXPECT_EQ) {
+  EXPECT_EQ(6, add(2, 3));
+  return ZState::z_success;
+}
+ZTEST_F(ASSERTION, SuccessEXPECT_EQ) {
+  EXPECT_EQ(5, add(2, 3));
+  return ZState::z_success;
+}
+ZTEST_F(ASSERTION, SuccessEXPECT_NEAR) {
+  EXPECT_NEAR(2, subtract(5.0, 3.0), 0.001);
+  return ZState::z_success;
+}
 
-\subsection{系统测试}
-% 在这里填写系统测试的内容
+ZTEST_F(ASSERTION, FailedEXPECT_NEAR) {
+  EXPECT_NEAR(2, subtract(5.1, 3.0), 0.001);
+  return ZState::z_success;
+}
+
+ZTEST_F(ASSERTION, FailedASSERT_TRUE) {
+  ASSERT_TRUE(false);
+  return ZState::z_success;
+}
+ZTEST_F(ASSERTION, SuccessASSERT_TRUE) {
+  ASSERT_TRUE(true);
+  return ZState::z_success;
+}
+\end{lstlisting}
+\end{framed}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{img/ass.png} % 假设logo.png是学校标志的图片文件
+    \caption{ assertion function test}
+    \label{fig:assertion function test}
+\end{figure}
+\subsubsection{测试管理测试}
+本测试模块旨在验证测试管理系统的功能完整性与可靠性。通过定义多种测试用例，包括单个安全测试、单个不安全测试以及包含多个断言的测试套件，系统能够全面覆盖不同的测试场景。此外，利用动态测试用例构建功能，可以灵活地创建和注册新的测试用例，进一步增强了测试框架的可扩展性。测试过程中，通过内存分配、函数调用验证以及断言检查，确保了测试用例的正确执行与预期结果的一致性。同时，测试框架还提供了前置和后置钩子功能，用于在测试前后进行必要的设置和清理操作，保障了测试环境的稳定性和测试结果的准确性。
+\begin{framed}
+    \begin{lstlisting}[language=C++]
+ZTEST_F(TESTMANAGE, safe_test_single_case, safe) {
+  ASSERT_TRUE(true);
+  return ZState::z_success;
+}
+ZTEST_F(TESTMANAGE, unsafe_test_single_case, unsafe) {
+  ASSERT_TRUE(true);
+  return ZState::z_success;
+}
+ZTEST_F(TESTMANAGE, test_suite) {
+  const size_t MB100 = 100 * 1024 * 1024;
+  auto ptr = std::make_unique<char[]>(MB100);
+  ASSERT_TRUE(ptr != nullptr);
+  EXPECT_EQ(3, subtract(5, 3));
+  EXPECT_EQ(6, add(2, 3));
+  return ZState::z_success;
+}
+void createSingleTestCase() {
+  // Use TestBuilder to construct test
+  auto test =
+      TestFactory::createTest("AdditionTest",                // Test name
+                              ZType::z_safe,                 // Execution
+                              "Test addition functionality", // Description
+                              add, 2, 3 // Function and arguments
+                              )
+          .setExpectedOutput(5) // Set expected result
+          .beforeAll([]() {     // Setup hook
+            std::cout << "Setting up single test..." << std::endl;
+          })
+          .afterEach([]() { // Teardown hook
+            std::cout << "Cleaning up after test..." << std::endl;
+          })
+          .withDescription("Verify basic addition")
+          .registerTest()
+          .build(); // Register with test
+}
+// in main()
+createSingleTestCase();
+
+\end{lstlisting}
+\end{framed}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{img/manage.png} % 假设logo.png是学校标志的图片文件
+    \caption{test management function test}
+    \label{fig:test management function test}
+\end{figure}
+\newpage
+\subsubsection{测试运行管理}
+在本测试模块中，主要验证了测试运行管理机制的效率与准确性。通过定义多个安全和不安全的测试用例，分别模拟了不同执行时间、不同任务类型的测试场景。每个测试用例通过sleep函数模拟了不同的执行时间，以测试并行执行和顺序执行的性能差异。
+测试结果解释如下
+\begin{itemize}
+    \item 使用一个具有八个线程的线程池，并行执行了三个测试用例
+    \item 顺序执行了三个测试用例
+\end{itemize}
+\begin{framed}
+    \begin{lstlisting}[language=C++]
+ZTEST_F(RUN, safe_test_single_case1, safe) {
+  sleep(2);
+  ASSERT_TRUE(true);
+  return ZState::z_success;
+}
+ZTEST_F(RUN, safe_test_single_case2, safe) {
+  sleep(1);
+  ASSERT_TRUE(true);
+  return ZState::z_success;
+}
+ZTEST_F(RUN, safe_test_single_case3, safe) {
+  sleep(3);
+  ASSERT_TRUE(true);
+  return ZState::z_success;
+}
+ZTEST_F(RUN, unsafe_test_single_case1, unsafe) {
+  sleep(1);
+  EXPECT_EQ(false, false);
+  return ZState::z_success;
+}
+ZTEST_F(RUN, unsafe_test_single_case2, unsafe) {
+  sleep(2);
+  EXPECT_EQ(false, false);
+  return ZState::z_success;
+}
+ZTEST_F(RUN, unsafe_test_single_case3, unsafe) {
+  sleep(3);
+  EXPECT_EQ(false, false);
+  return ZState::z_success;
+}
+\end{lstlisting}
+\end{framed}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{img/context.png}
+    \caption{test 执行器 function test}
+    \label{fig:test 执行器 function test}
+\end{figure}
+
+\subsubsection{数据驱动测试}
+展示了两种不同类型的数据驱动测试用例，分别使用了内存中的数据集以及外部CSV文件作为测试数据源。
+
+\begin{framed}
+    \begin{lstlisting}[language=C++]
+ZTestDataManager<vector<int>, int> sum_test_data = {
+    {{1, 2}, 3}, {{-1, 1}, 0}, {{10, 20}, 30}};
+ZTEST_P(ArithmeticSuite, SumTest, sum_test_data) {
+  auto &&[inputs, expected] = _data.current();
+  int actual = inputs[0] + inputs[1];
+  EXPECT_EQ_FOREACH(expected, actual);
+  return ZState::z_success;
+}
+ZTestDataManager<tuple<float, int>, float> sum_test_data2 = {
+    {{1.2, 2}, 3.2}, {{-1.0, 1}, 0.0}, {{10.1, 20}, 30.2}};
+ZTEST_P(ArithmeticSuite, SumTestfordiff, sum_test_data2) {
+  auto &&[inputs, expected] = _data.current();
+  float actual = std::get<0>(inputs) + std::get<1>(inputs);
+  EXPECT_EQ_FOREACH(expected, actual);
+  return ZState::z_success;
+}
+ZTEST_P_CSV(MathTests, AdditionTests, "data.csv") {
+  auto inputs = getInput();
+  auto expected = getOutput();
+  double actual = std::get<double>(inputs[0]) + std::get<double>(inputs[1]);
+  EXPECT_EQ(actual, std::get<double>(expected));
+  return ZState::z_success;
+}
+\end{lstlisting}
+\end{framed}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{img/data.png}
+    \caption{数据驱动 function test}
+    \label{fig: 数据驱动 function test}
+\end{figure}
+\subsubsection{benchmark测试}
+测试benchmark类型测试的定义，以及测试时间分布的可视化，以及在GUI上对于CPU和内存使用率的监视。
+
+\begin{framed}
+
+    \begin{lstlisting}[language=C++]
+ZBENCHMARK(Vector, PushBack) {
+  std::vector<int> v;
+  for (int i = 0; i < 10000; ++i)
+    v.push_back(i);
+  return ZState::z_success;
+}
+ZBENCHMARK(Matrix, PushBack, 20000) {
+  std::vector<int> v;
+  for (int i = 0; i < 1000; ++i)
+    v.push_back(random());
+  return ZState::z_success;
+}\end{lstlisting}
+\end{framed}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{img/ben.png}
+    \caption{数据驱动 function test}
+    \label{fig: 数据驱动 function test}
+\end{figure}
+
+\begin{itemize}
+    \item
+\end{itemize}
+\subsubsection{报告生成测试}
+
+测试了html,json,xml格式报告的生成。
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{img/html.png}
+    \caption{HTML 测试报告}
+    \label{fig: 数据驱动 function test}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{img/json.png}
+    \caption{部分json报告}
+    \label{fig: 数据驱动 function test}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{img/xml.png}
+    \caption{xml(JUnit格式)报告}
+    \label{fig: 数据驱动 function test}
+\end{figure}
+\subsubsection{GUI展示}
+测试了GUI的展示，主题的切换，AI助手展示等功能。
+\begin{figure}[H]
+    \centering
+    \begin{minipage}{0.5\textwidth}
+        \includegraphics[width=\textwidth]{img/showgui.png}
+        \caption{Dark theme GUI展示}
+        \label{fig:showgui}
+    \end{minipage}%
+    \begin{minipage}{0.5\textwidth}
+        \includegraphics[width=\textwidth]{img/light.png}
+        \caption{Light Theme GUI展示}
+        \label{fig:light}
+    \end{minipage}
+\end{figure}
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.4\textwidth]{img/aih.png}
+    \caption{AI诊断助手展示}
+    \label{fig: 数据驱动 function test}
+\end{figure}
+\newpage
+\subsubsection{AI诊断测试}
+生成报告的时候，调用AI(qwen turbo)进行诊断，并写入到HTML报告中。
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{img/ai.png}
+\end{figure}
+在GUI界面，调用AI(qwen turbo)进行诊断对于单个测试用例进行诊断并显示，允许用户输入自定义的提示词和测试所在的文件路径。
+\begin{figure}[H]
+    \centering
+    \begin{minipage}{0.45\textwidth}
+        \includegraphics[width=\textwidth]{img/aih1.png}
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.45\textwidth}
+        \includegraphics[width=\textwidth]{img/aih2.png}
+    \end{minipage}
+\end{figure}
+
 
 \section{个人总结}
 % 在这里写下你的收获、建议等内容
 
 \section{参考文献}
 \begin{thebibliography}{99}
-    \bibitem{ref1} [参考文献1]
-    \bibitem{ref2} [参考文献2]
-    % 根据实际情况继续添加
+    \bibitem{gtest} Google Test. \textit{Google Test Documentation}. [Online]. Available: https://github.com/google/googletest
+    \bibitem{junit} JUnit. \textit{JUnit Documentation}. [Online]. Available: https://junit.org/junit5/
+    \bibitem{catch} Catch2. \textit{Catch2 Documentation}. [Online]. Available: https://github.com/catchorg/Catch2
+    \bibitem{gtest-parallel} Google Test Parallel. \textit{Google Test Parallel Documentation}. [Online]. Available: https://github.com/google/gtest-parallel
+    \bibitem{pytest} Pytest. \textit{Pytest Documentation}. [Online]. Available: https://docs.pytest.org/en/latest/
+    \bibitem{miniunit} MiniUnit. \textit{MiniUnit Documentation}. [Online]. Available: https://github.com/urin/miniunit
 \end{thebibliography}
 
-\end{document}修正
+\end{document}

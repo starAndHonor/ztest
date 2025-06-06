@@ -352,7 +352,8 @@ public:
     runParameterizedInSerial();
 
     if (generateHtml)
-      logger.generateHtmlReport();
+      logger.generateHtmlReport("test_report.html",
+                                "/home/starandhonor/code/ztest/main.cpp", true);
     if (generateJson)
       logger.generateJsonReport();
     if (generateJUnit)
