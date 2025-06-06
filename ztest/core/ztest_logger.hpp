@@ -1,12 +1,14 @@
 #pragma once
 #include "ztest_context.hpp"
 #include "ztest_result.hpp"
+#include "ztest_utils.hpp"
 #include <chrono>
 #include <fstream>
 #include <iostream>
 #include <map>
 #include <mutex>
 #include <ostream>
+#include <regex>
 #include <sstream>
 #include <string>
 #include <thread>
@@ -20,6 +22,7 @@ private:
   mutex _log_mutex;
   ofstream _log_file; // log输出流
   ZLogLevel _log_level = ZLogLevel::DEBUG;
+  std::string _test_file_path;
 
 public:
   void set_level(ZLogLevel level) { _log_level = level; }
@@ -33,7 +36,8 @@ public:
       log("DEBUG", s);
   }
 
-  void warning(const string &s) { // 新增warning级别
+  void warning(const string &s) 
+  { // 新增warning级别
     if (_log_level <= ZLogLevel::WARNING)
       log("WARNING", s);
   }
@@ -93,10 +97,81 @@ public:
    * @description: 生成html报告信息
    * @return {*}
    */
+  void setTestFilePath(const std::string& path) {
+    _test_file_path = path;
+  }
   void
-  generateHtmlReport(const std::string &reportFilename = "test_report.html") {
+  generateHtmlReport(const std::string &reportFilename = "test_report.html",
+                     bool generateAI = true) {
+    // First get test results for both report and AI prompt
+    auto results = ZTestResultManager::getInstance().getResults();
+    int passed = 0, failed = 0;
+
+    // Prepare test statistics for AI prompt
+    std::ostringstream statsStream;
+    for (const auto &[name, result] : results) {
+      if (result.getState() == ZState::z_success)
+        passed++;
+      else
+        failed++;
+    }
+
+    // Build AI prompt with structured test results
+    std::string prompt = "请根据以下单元测试结果生成中文分析报告：\n\n"
+                         "### 测试统计\n"
+                         "- 总测试用例: " +
+                         std::to_string(passed + failed) +
+                         "\n"
+                         "- 通过: " +
+                         std::to_string(passed) +
+                         "\n"
+                         "- 失败: " +
+                         std::to_string(failed) +
+                         "\n\n"
+                         "### 失败用例详情\n";
+
+    // Add detailed failure info for analysis
+    for (const auto &[name, result] : results) {
+      if (result.getState() == ZState::z_failed) {
+        prompt += "- " + name + ": " + result.getErrorMsg() + "\n";
+      }
+    }
+    if (_test_file_path != "") {
+      // 给出的test_file的绝对路径,读取test_file
+      std::cout << "test_file: " << _test_file_path << "\n";
+      std::ifstream test_file_stream(_test_file_path);
+      if (test_file_stream) {
+        std::string test_file_content(
+            (std::istreambuf_iterator<char>(test_file_stream)),
+            std::istreambuf_iterator<char>());
+        prompt += "### 测试文件内容\n" + test_file_content + "\n\n";
+      }
+    }
+    prompt += "\n请提供以下内容(不多于100字)：\n"
+              "1. 识别失败的根本原因\n"
+              "2. 提供修复建议\n"
+              "3. 指出高风险测试用例\n"
+              "4. 评估整体测试覆盖率\n"
+              "5. 提出系统稳定性改进建议\n";
+    // Get AI analysis
+    std::string jsonReport = generateJsonReport(); // For internal use only
+    std::cout << "prompt: " << prompt << "\n";
+    // auto api_key = getenv("DASHSCOPE_API_KEY");
+    std::string api_key = getApiKey();
+    std::cout << "api_key: " << api_key << std::endl;
+    std::string ai_advice;
+    if (generateAI)
+      ai_advice = call_qwen_api(prompt, api_key);
+    else
+      ai_advice = "No AI advice";
+    std::cout << "ai_advice: " << ai_advice << "\n";
+
+    // Escape special characters for JS safety
+    ai_advice = std::regex_replace(ai_advice, std::regex("`"), "\\`");
+    ai_advice = std::regex_replace(ai_advice, std::regex("\""), "\\\"");
+
+    // Start building HTML content
     std::ofstream reportFile(reportFilename);
-    debug("generating html log");
     if (!reportFile) {
       std::cerr << "Failed to open report file: " << reportFilename
                 << std::endl;
@@ -105,140 +180,133 @@ public:
 
     std::ostringstream html;
 
-    // Start HTML document
+    // HTML header with markdown support
     html << "<!DOCTYPE html>\n"
-         << "<html lang=\"en\">\n"
+         << "<html lang=\"zh-CN\">\n"
          << "<head>\n"
          << "    <meta charset=\"UTF-8\">\n"
-         << "    <title>ZTest Report</title>\n"
+         << "    <title>ZTest 测试报告</title>\n"
+         << "    <script "
+            "src='https://cdn.jsdelivr.net/npm/markdown-it@14.0.0/dist/"
+            "markdown-it.min.js'></script>\n"
          << "    <style>\n"
-         << "        body { font-family: Arial, sans-serif; padding: 20px; }\n"
-         << "        table { border-collapse: collapse; width: 100%; "
-            "margin-top: 20px; }\n"
-         << "        th, td { border: 1px solid #ddd; padding: 8px; "
-            "text-align: left; }\n"
-         << "        tr:nth-child(even) { background-color: #f2f2f2; }\n"
-         << "        .success { color: green; font-weight: bold; }\n"
-         << "        .failed { color: red; font-weight: bold; }\n"
-         << "        .header { font-size: 24px; margin-bottom: 20px; }\n"
+         << "        :root {\n"
+         << "            --primary-color: #2c3e50;\n"
+         << "            --success-color: #27ae60;\n"
+         << "            --fail-color: #c0392b;\n"
+         << "            --hover-color: #f8f9fa;\n"
+         << "        }\n"
+         << "        body {\n"
+         << "            font-family: 'Segoe UI', system-ui, sans-serif;\n"
+         << "            line-height: 1.6;\n"
+         << "            color: #34495e;\n"
+         << "            margin: 0;\n"
+         << "            padding: 20px;\n"
+         << "        }\n"
+         << "        .header {\n"
+         << "            background: var(--primary-color);\n"
+         << "            color: white;\n"
+         << "            padding: 2rem;\n"
+         << "            border-radius: 8px;\n"
+         << "            margin: 2rem auto;\n"
+         << "            width: 80%;\n"
+         << "            box-sizing: border-box;\n"
+         << "            box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n"
+         << "            text-align: center;\n"
+         << "        }\n"
+         << "        table {\n"
+         << "            width: 80%;\n"
+         << "            margin: 2rem auto;\n"
+         << "            border-collapse: collapse;\n"
+         << "            background: white;\n"
+         << "            box-shadow: 0 1px 3px rgba(0,0,0,0.1);\n"
+         << "            border-radius: 8px;\n"
+         << "            overflow: hidden;\n"
+         << "        }\n"
+         << "        th, td {\n"
+         << "            padding: 12px 15px;\n"
+         << "            text-align: left;\n"
+         << "            border-bottom: 1px solid #ecf0f1;\n"
+         << "        }\n"
+         << "        th {\n"
+         << "            background-color: var(--primary-color);\n"
+         << "            color: white;\n"
+         << "        }\n"
+         << "        tr:hover { background-color: var(--hover-color); }\n"
+         << "        .status-badge {\n"
+         << "            display: inline-block;\n"
+         << "            padding: 4px 12px;\n"
+         << "            border-radius: 20px;\n"
+         << "            font-size: 0.9em;\n"
+         << "            font-weight: 500;\n"
+         << "        }\n"
+         << "        .success { background-color: var(--success-color); color: "
+            "white; }\n"
+         << "        .failed { background-color: var(--fail-color); color: "
+            "white; }\n"
+         << "        .summary-card {\n"
+         << "            display: flex;\n"
+         << "            justify-content: center;\n"
+         << "            gap: 2rem;\n"
+         << "            margin: 2rem auto;\n"
+         << "            padding: 1.5rem;\n"
+         << "            width: 80%;\n"
+         << "            background: white;\n"
+         << "            border-radius: 8px;\n"
+         << "            box-shadow: 0 1px 3px rgba(0,0,0,0.1);\n"
+         << "        }\n"
+         << "        .ai-analysis {\n"
+         << "            margin: 2rem auto;\n"
+         << "            width: 80%;\n"
+         << "            background: white;\n"
+         << "            padding: 1.5rem;\n"
+         << "            border-radius: 8px;\n"
+         << "            box-shadow: 0 1px 3px rgba(0,0,0,0.1);\n"
+         << "        }\n"
          << "    </style>\n"
          << "</head>\n"
-         << "<body>\n"
-         << "    <div class=\"header\">ZTest Execution Report</div>\n"
-         << "    <table>\n"
+         << "<body>\n";
+
+    html << "    <div class=\"header\">ZTest 测试报告</div>\n";
+    html << "        </tbody>\n"
+         << "    </table>\n"
+         << "    <div class=\"summary-card\">\n"
+         << "        <div class=\"summary-item\">\n"
+         << "            <strong style='font-size: 2rem;'>" << (passed + failed)
+         << "</strong>\n"
+         << "            <div>总测试用例</div>\n"
+         << "        </div>\n"
+         << "        <div class=\"summary-item\">\n"
+         << "            <strong style='color: var(--success-color); "
+            "font-size: 2rem;'>"
+         << passed << "</strong>\n"
+         << "            <div>通过</div>\n"
+         << "        </div>\n"
+         << "        <div class=\"summary-item\">\n"
+         << "            <strong style='color: var(--fail-color); font-size: "
+            "2rem;'>"
+         << failed << "</strong>\n"
+         << "            <div>失败</div>\n"
+         << "        </div>\n"
+         << "    </div>\n";
+    html << "    <table>\n"
          << "        <thead>\n"
          << "            <tr>\n"
-         << "                <th>Test Name</th>\n"
-         << "                <th>Status</th>\n"
-         << "                <th>Duration (ms)</th>\n"
-         << "                <th>Type</th>\n"
-         << "                <th>Error Message</th>\n"
+         << "                <th>测试用例</th>\n"
+         << "                <th>状态</th>\n"
+         << "                <th>耗时 (ms)</th>\n"
+         << "                <th>类型</th>\n"
+         << "                <th>错误信息</th>\n"
          << "            </tr>\n"
          << "        </thead>\n"
          << "        <tbody>\n";
-    html << "<style>\n"
-         << "    :root {\n"
-         << "        --primary-color: #2c3e50;\n"
-         << "        --success-color: #27ae60;\n"
-         << "        --fail-color: #c0392b;\n"
-         << "        --hover-color: #f8f9fa;\n"
-         << "    }\n"
-         << "    body {\n"
-         << "        font-family: 'Segoe UI', system-ui, sans-serif;\n"
-         << "        line-height: 1.6;\n"
-         << "        color: #34495e;\n"
-         << "        margin: 0;\n"
-         << "        padding: 20px;\n"
-         << "    }\n"
-         << "    .header {\n"
-         << "        background: var(--primary-color);\n"
-         << "        color: white;\n"
-         << "        padding: 2rem;\n"
-         << "        border-radius: 8px;\n"
-         << "        margin: 2rem auto;\n"
-         << "        width: 80%;\n"
-         << "        box-sizing: border-box;\n"
-         << "        box-shadow: 0 2px 4px rgba(0,0,0,0.1);\n"
-         << "        text-align: center;\n"
-         << "    }\n"
-         << "    table {\n"
-         << "        width: 80%;\n"        // Changed from 100% to 80%
-         << "        margin: 2rem auto;\n" // Add auto margin for centering
-         << "        border-collapse: collapse;\n"
-         << "        background: white;\n"
-         << "        box-shadow: 0 1px 3px rgba(0,0,0,0.1);\n"
-         << "        border-radius: 8px;\n"
-         << "        overflow: hidden;\n"
-         << "        box-sizing: border-box;\n" // Add box-sizing
-         << "    }\n"
-         << "    th, td {\n"
-         << "        padding: 12px 15px;\n"
-         << "        text-align: left;\n"
-         << "        border-bottom: 1px solid #ecf0f1;\n"
-         << "    }\n"
-         << "    th {\n"
-         << "        background-color: var(--primary-color);\n"
-         << "        color: white;\n"
-         << "        font-weight: 600;\n"
-         << "    }\n"
-         << "    tr:hover { background-color: var(--hover-color); }\n"
-         << "    .status-badge {\n"
-         << "        display: inline-block;\n"
-         << "        padding: 4px 12px;\n"
-         << "        border-radius: 20px;\n"
-         << "        font-size: 0.9em;\n"
-         << "        font-weight: 500;\n"
-         << "    }\n"
-         << "    .success { background-color: var(--success-color); color: "
-            "white; }\n"
-         << "    .failed { background-color: var(--fail-color); color: white; "
-            "}\n"
-         << "    .summary-card {\n"
-         << "        display: flex;\n"
-         << "        justify-content: center;\n"
-         << "        gap: 2rem;\n"
-         << "        margin: 2rem auto;\n"
-         << "        padding: 1.5rem;\n"
-         << "        width: 80%;\n"
-         << "        box-sizing: border-box;\n"
-         << "        background: white;\n"
-         << "        border-radius: 8px;\n"
-         << "        box-shadow: 0 1px 3px rgba(0,0,0,0.1);\n"
-         << "    }\n"
-         << "    .summary-item {\n"
-         << "        text-align: center;\n"
-         << "        padding: 0 1.5rem;\n"
-         << "    }\n"
-         << "    .summary-item {\n"
-         << "        text-align: center;\n"
-         << "        padding: 0 1.5rem;\n"
-         << "    }\n"
-         << "    .summary-item strong {\n"
-         << "        display: block;\n"
-         << "        font-size: 1.5rem;\n"
-         << "        color: var(--primary-color);\n"
-         << "        margin-bottom: 0.5rem;\n"
-         << "    }\n"
-         << "    @media (max-width: 768px) {\n"
-         << "        table, .summary-card { display: block; }\n"
-         << "        td { position: relative; padding-left: 50%; }\n"
-         << "        td:before {\n"
-         << "            position: absolute;\n"
-         << "            left: 6px;\n"
-         << "            content: attr(data-label);\n"
-         << "            font-weight: bold;\n"
-         << "        }\n"
-         << "    }\n"
-         << "</style>\n";
-    // Add test results
-    auto results = ZTestResultManager::getInstance().getResults();
-    int passed = 0, failed = 0;
 
+    // Add test results
     for (const auto &[name, result] : results) {
       const char *statusClass =
           (result.getState() == ZState::z_success) ? "success" : "failed";
       const char *statusText =
-          (result.getState() == ZState::z_success) ? "Passed" : "Failed";
+          (result.getState() == ZState::z_success) ? "通过" : "失败";
 
       html << "            <tr>\n"
            << "                <td>" << name << "</td>\n"
@@ -251,29 +319,35 @@ public:
            << (result.getErrorMsg().empty() ? "-" : result.getErrorMsg())
            << "</td>\n"
            << "            </tr>\n";
-
-      if (result.getState() == ZState::z_success)
-        passed++;
-      else
-        failed++;
     }
 
-    html << "    <div class=\"summary-card\">\n"
-         << "        <div class=\"summary-item\">\n"
-         << "            <strong>" << (passed + failed) << "</strong>\n"
-         << "            Total Tests\n"
-         << "        </div>\n"
-         << "        <div class=\"summary-item\">\n"
-         << "            <strong style=\"color: var(--success-color)\">"
-         << passed << "</strong>\n"
-         << "            Passed\n"
-         << "        </div>\n"
-         << "        <div class=\"summary-item\">\n"
-         << "            <strong style=\"color: var(--fail-color)\">" << failed
-         << "</strong>\n"
-         << "            Failed\n"
-         << "        </div>\n"
-         << "    </div>\n";
+    // Summary card
+
+    // AI Analysis section
+    html << "    <div class=\"ai-analysis\">\n"
+         << "        <h3 style='color: var(--primary-color); margin-bottom: "
+            "1rem;'>AI分析报告</h3>\n"
+         << "        <div id=\"ai-content\" style='padding: 1rem; background: "
+            "#f8f9fa; border-radius: 4px;'>"
+         << "正在加载AI分析结果...</div>\n"
+         << "    </div>\n"
+         << "    <script>\n"
+         << "        document.addEventListener('DOMContentLoaded', () => {\n"
+         << "            const md = window.markdownit({html: true, linkify: "
+            "true});\n"
+         << "            const aiContent = `" << ai_advice << "`;\n"
+         << "            const container = "
+            "document.getElementById('ai-content');\n"
+         << "            if (container && aiContent.trim()) {\n"
+         << "                container.innerHTML = md.render(aiContent);\n"
+         << "            } else {\n"
+         << "                container.innerHTML = "
+            "'<em>未能获取AI分析结果</em>';\n"
+         << "            }\n"
+         << "        });\n"
+         << "    </script>\n"
+         << "</body>\n"
+         << "</html>";
 
     // Write to file
     reportFile << html.str();
@@ -284,7 +358,7 @@ public:
    * @param {const std::string&} reportFilename
    * @return {void}
    */
-  void
+  std::string
   generateJsonReport(const std::string &reportFilename = "test_report.json") {
     std::ofstream reportFile(reportFilename);
     debug("generating json log");
@@ -292,7 +366,7 @@ public:
     if (!reportFile) {
       std::cerr << "Failed to open JSON report file: " << reportFilename
                 << std::endl;
-      return;
+      return "error";
     }
 
     auto results = ZTestResultManager::getInstance().getResults();
@@ -337,6 +411,7 @@ public:
 
     reportFile << json.str();
     reportFile.close();
+    return json.str();
   }
   /**
    * @description:生成junit格式报告，可以用于CI集成
