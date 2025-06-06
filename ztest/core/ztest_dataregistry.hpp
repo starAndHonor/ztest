@@ -4,6 +4,8 @@
 #include <memory>
 #include <mutex>
 #include <unordered_map>
+// ZDataRegistry
+// 类是一个数据注册与缓存管理类，采用单例模式实现，用于管理测试数据的加载和缓存
 class ZDataRegistry {
 public:
   static ZDataRegistry &instance() {
@@ -20,24 +22,31 @@ public:
     std::lock_guard<std::mutex> lock(_mutex);
 
     logger.debug("Checking cache for: " + filePath);
-
-    // LRU访问更新
+    /**
+     * @description: LRU访问更新
+     */
     if (auto it = _cache_map.find(filePath); it != _cache_map.end()) {
       logger.debug("Cache hit for: " + filePath);
       _lru_list.splice(_lru_list.begin(), _lru_list, it->second.second);
       return std::static_pointer_cast<T>(it->second.first);
     }
-
-    // 创建新加载器
+    /**
+     * @description: 创建新加载器
+     */
     logger.info("Loading new file: " + filePath);
     auto loader = std::make_shared<T>(filePath);
     _lru_list.push_front(filePath);
+    /**
+     * @description: 插入新条目
+     */
 
-    // 插入新条目
     _cache_map[filePath] = {loader, _lru_list.begin()};
     logger.debug("Cached file: " + filePath +
                  " | Size: " + std::to_string(loader->size()));
-    // LRU淘汰
+
+    /**
+     * @description: LRU淘汰
+     */
     if (_max_size > 0 && _cache_map.size() > _max_size) {
       auto last = _lru_list.back();
       logger.debug("Evicting LRU cache item: " + last);
@@ -47,8 +56,10 @@ public:
 
     return loader;
   }
+  /**
+   * @description:获取缓存数据
+   */
 
-  // 获取缓存数据
   template <typename T> std::shared_ptr<T> get(const std::string &filePath) {
     std::lock_guard<std::mutex> lock(_mutex);
     logger.debug("Getting cache for: " + filePath);
@@ -57,8 +68,10 @@ public:
     }
     return nullptr;
   }
+  /**
+   * @description: 清空指定缓存
+   */
 
-  // 清空指定缓存
   void clear(const std::string &filePath) {
     std::lock_guard<std::mutex> lock(_mutex);
     _cache_map.erase(filePath);

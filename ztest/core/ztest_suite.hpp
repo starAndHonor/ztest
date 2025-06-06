@@ -23,12 +23,20 @@ public:
       }
     }
   }
-
+  /**
+   * @description: 向套件中添加子测试用例
+   * @param test 子测试用例的唯一指针
+   * @return 当前测试套件的引用
+   */
   ZTestSuite &addTest(unique_ptr<ZTestBase> test) {
     _sub_tests.push_back(move(test));
     return *this;
   }
-
+  /**
+   * @description: 添加测试前的钩子函数
+   * @param hook 钩子函数
+   * @return 当前测试套件的引用
+   */
   ZTestSuite &beforeAll(function<void()> hook) {
     addBeforeAll(move(hook));
     return *this;
@@ -39,6 +47,10 @@ public:
     return *this;
   }
 
+  /**
+   * @description: 执行测试套件中的所有子测试用例
+   * @return 测试套件的执行状态（成功或失败）
+   */
   ZState run() override {
     _total_duration = 0.0;
     _passed = _failed = 0;
@@ -79,28 +91,44 @@ public:
     return oss.str();
   }
 };
+// 构建器模式的实现类，用于方便地创建和配置测试套件
 class SuiteBuilder {
 private:
   std::unique_ptr<ZTestSuite> _suite;
 
 public:
   SuiteBuilder(std::unique_ptr<ZTestSuite> suite) : _suite(std::move(suite)) {}
-
+  /**
+   * @description: 向套件中添加子测试用例
+   * @param test 子测试用例的唯一指针
+   * @return 当前构建器的引用
+   */
   SuiteBuilder &addTest(std::unique_ptr<ZTestBase> test) {
     _suite->addTest(std::move(test));
     return *this;
   }
-
+  /**
+   * @description: 添加测试前的钩子函数
+   * @param hook 钩子函数
+   * @return 当前构建器的引用
+   */
   SuiteBuilder &beforeAll(std::function<void()> hook) {
     _suite->addBeforeAll(std::move(hook));
     return *this;
   }
-
+  /**
+   * @description: 添加每个测试后的钩子函数
+   * @param hook 钩子函数
+   * @return 当前构建器的引用
+   */
   SuiteBuilder &afterEach(std::function<void()> hook) {
     _suite->addAfterEach(std::move(hook));
     return *this;
   }
-
+  /**
+   * @description: 将测试套件注册到测试注册表
+   * @return 当前构建器的引用
+   */
   SuiteBuilder &addToRegistry() {
     if (_suite) {
       ZTestRegistry::instance().addTest(
@@ -109,6 +137,10 @@ public:
     return *this;
   }
 
+  /**
+   * @description: 构建并返回测试套件
+   * @return 测试套件的唯一指针
+   */
   SuiteBuilder &addToContext(ZTestContext &context) {
     context.addTest(std::move(_suite));
     return *this;

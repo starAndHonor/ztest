@@ -62,7 +62,12 @@ public:
       });
     }
   }
-
+  /**
+   * @description: 向线程池添加任务
+   * @tparam F 任务函数类型
+   * @param f 任务函数
+   * @return 任务的未来对象，用于获取任务执行结果
+   */
   template <class F> auto enqueue(F &&f) -> std::future<decltype(f())> {
     using ReturnType = decltype(f());
 
@@ -97,13 +102,19 @@ public:
     }
   }
 
-  // 调试辅助方法
+  /**
+   * @description: 将线程ID转换为字符串
+   * @param id 线程ID
+   * @return 线程ID的字符串表示
+   */
   static std::string thread_id_to_string(const std::thread::id &id) {
     std::stringstream ss;
     ss << id;
     return ss.str();
   }
-
+  /**
+   * @description: 打印线程池状态信息
+   */
   void log_status() const {
     logger.debug("[ThreadPool Status]"
                  "\n- Active workers: " +
@@ -113,5 +124,9 @@ public:
                  "\n- Pending tasks: " + std::to_string(tasks.size()));
   }
 
+  /**
+   * @description: 判断线程池是否已停止
+   * @return 已停止返回true，否则返回false
+   */
   bool is_stopped() const { return stop.load(); }
 };

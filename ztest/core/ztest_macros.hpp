@@ -1,4 +1,3 @@
-
 #pragma once
 #include <cmath>
 #define EXPECT_EQ(expected, actual)                                            \

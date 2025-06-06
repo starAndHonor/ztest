@@ -17,6 +17,7 @@ using namespace std;
 constexpr const char *green = "\033[1;32m";
 constexpr const char *red = "\033[1;31m";
 constexpr const char *reset = "\033[0m";
+
 class ZLogger {
 private:
   mutex _log_mutex;
@@ -65,12 +66,12 @@ public:
     struct tm time_info;
     localtime_r(&time, &time_info);
 
-    // Manual time formatting for YYYY-MM-DD HH:MM:SS
+    // 时间格式为YYYY-MM-DD HH:MM:SS
     char time_str[20];
     strftime(time_str, sizeof(time_str), "%F %T", &time_info);
 
     string entry = "[";
-    entry += time_str; // append formatted time
+    entry += time_str; // 附加格式化时间
     entry += "] [" + level + "] " + s + "\n";
 
     cout << entry;
@@ -99,11 +100,9 @@ public:
   generateHtmlReport(const std::string &reportFilename = "test_report.html",
                      const std::string &test_file = "",
                      bool generateAI = true) {
-    // First get test results for both report and AI prompt
     auto results = ZTestResultManager::getInstance().getResults();
     int passed = 0, failed = 0;
 
-    // Prepare test statistics for AI prompt
     std::ostringstream statsStream;
     for (const auto &[name, result] : results) {
       if (result.getState() == ZState::z_success)
@@ -112,7 +111,6 @@ public:
         failed++;
     }
 
-    // Build AI prompt with structured test results
     std::string prompt = "请根据以下单元测试结果生成中文分析报告：\n\n"
                          "### 测试统计\n"
                          "- 总测试用例: " +
@@ -126,14 +124,13 @@ public:
                          "\n\n"
                          "### 失败用例详情\n";
 
-    // Add detailed failure info for analysis
     for (const auto &[name, result] : results) {
       if (result.getState() == ZState::z_failed) {
         prompt += "- " + name + ": " + result.getErrorMsg() + "\n";
       }
     }
     if (test_file != "") {
-      // 给出的test_file的绝对路径,读取test_file
+
       std::cout << "test_file: " << test_file << "\n";
       std::ifstream test_file_stream(test_file);
       if (test_file_stream) {
@@ -149,10 +146,8 @@ public:
               "3. 指出高风险测试用例\n"
               "4. 评估整体测试覆盖率\n"
               "5. 提出系统稳定性改进建议\n";
-    // Get AI analysis
-    std::string jsonReport = generateJsonReport(); // For internal use only
+    std::string jsonReport = generateJsonReport();
     std::cout << "prompt: " << prompt << "\n";
-    // auto api_key = getenv("DASHSCOPE_API_KEY");
     std::string api_key = getApiKey();
     std::cout << "api_key: " << api_key << std::endl;
     std::string ai_advice;
@@ -162,11 +157,9 @@ public:
       ai_advice = "No AI advice";
     std::cout << "ai_advice: " << ai_advice << "\n";
 
-    // Escape special characters for JS safety
     ai_advice = std::regex_replace(ai_advice, std::regex("`"), "\\`");
     ai_advice = std::regex_replace(ai_advice, std::regex("\""), "\\\"");
 
-    // Start building HTML content
     std::ofstream reportFile(reportFilename);
     if (!reportFile) {
       std::cerr << "Failed to open report file: " << reportFilename
@@ -176,7 +169,7 @@ public:
 
     std::ostringstream html;
 
-    // HTML header with markdown support
+    // HTML标头
     html << "<!DOCTYPE html>\n"
          << "<html lang=\"zh-CN\">\n"
          << "<head>\n"
@@ -297,7 +290,7 @@ public:
          << "        </thead>\n"
          << "        <tbody>\n";
 
-    // Add test results
+    // 测试结果
     for (const auto &[name, result] : results) {
       const char *statusClass =
           (result.getState() == ZState::z_success) ? "success" : "failed";
@@ -317,9 +310,7 @@ public:
            << "            </tr>\n";
     }
 
-    // Summary card
-
-    // AI Analysis section
+    // AI分析报告
     html << "    <div class=\"ai-analysis\">\n"
          << "        <h3 style='color: var(--primary-color); margin-bottom: "
             "1rem;'>AI分析报告</h3>\n"
@@ -345,7 +336,7 @@ public:
          << "</body>\n"
          << "</html>";
 
-    // Write to file
+    // 文件写入
     reportFile << html.str();
     reportFile.close();
   }
@@ -372,7 +363,6 @@ public:
     json << "{\n";
     json << "  \"summary\": {\n";
 
-    // Add summary stats
     for (const auto &[name, result] : results) {
       result.getState() == ZState::z_success ? passed++ : failed++;
     }
@@ -383,7 +373,6 @@ public:
     json << "  },\n";
     json << "  \"tests\": [\n";
 
-    // Add test results
     bool first = true;
     for (const auto &[name, result] : results) {
       if (!first)

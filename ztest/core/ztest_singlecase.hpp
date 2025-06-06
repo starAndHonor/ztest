@@ -20,12 +20,20 @@ public:
     };
     return *this;
   }
-
+  /**
+   * @description: 设置期望的测试结果
+   * @param expected 期望的返回值
+   * @return 当前测试用例对象的引用
+   */
   auto &setExpectedOutput(const RetType &expected) {
     _expected_return = expected;
     return *this;
   }
-
+  /**
+   * @description: 设置测试用例的描述信息
+   * @param desc 测试描述
+   * @return 当前测试用例对象的引用
+   */
   auto &withDescription(const string &desc) {
     setDescription(desc);
     return *this;
@@ -76,6 +84,10 @@ public:
     _test_case->addAfterEach(move(hook));
     return *this;
   }
+  /**
+   * @description: 将测试用例注册到测试注册表
+   * @return 当前测试构建器对象的引用
+   */
   TestBuilder &registerTest() {
     if (_test_case) {
       ZTestRegistry::instance().addTest(
@@ -83,16 +95,29 @@ public:
     }
     return *this;
   }
+  /**
+   * @description: 设置期望的测试结果
+   * @param expected 期望的返回值
+   * @return 当前测试构建器对象的引用
+   */
   TestBuilder &setExpectedOutput(const RetType &expected) {
     _test_case->setExpectedOutput(expected);
     return *this;
   }
-
+  /**
+   * @description: 添加测试前的钩子函数
+   * @param hook 钩子函数
+   * @return 当前测试构建器对象的引用
+   */
   TestBuilder &beforeAll(function<void()> hook) {
     _test_case->addBeforeAll(move(hook));
     return *this;
   }
-
+  /**
+   * @description: 设置测试用例的描述信息
+   * @param desc 测试描述
+   * @return 当前测试构建器对象的引用
+   */
   TestBuilder &withDescription(const string &desc) {
     _test_case->withDescription(desc);
     return *this;

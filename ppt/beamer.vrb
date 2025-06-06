@@ -1,0 +1,7 @@
+\frametitle{测试定义示例}
+    \begin{lstlisting}[language=C++]
+ZTEST_F(SuiteName, TestName, safe/unsafe) { ... }
+ZBENCHMARK(SuiteName, TestName, iterations) { ... }
+ZTEST_P(SuiteName, TestName, data) { ... }
+ZTEST_P_CSV(SuiteName, TestName, "data.csv") { ... }
+\end{lstlisting}

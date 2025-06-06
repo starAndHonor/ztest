@@ -23,6 +23,7 @@
 #include "lib/imgui_markdown/imgui_markdown.h"
 #include <GLFW/glfw3.h>
 #include <map>
+// MVC 架构中的模型层，管理测试状态和数据。
 class ZTestModel {
 public:
   std::atomic<bool> _is_running{false};
@@ -33,6 +34,10 @@ public:
     bool expected = false;
     return _is_running.compare_exchange_strong(expected, true);
   }
+  /**
+   * @description: 从测试注册表初始化测试模型
+   * @param context 测试上下文引用
+   */
   void initializeFromRegistry(ZTestContext &context) {
     std::lock_guard<std::mutex> lock(_mutex);
     auto &registry = ZTestRegistry::instance();
@@ -48,7 +53,7 @@ public:
     }
   }
 };
-
+// 作为 MVC 架构中的控制器层，处理用户操作并协调模型与视图。
 class ZTestController {
 public:
   ZTestController(ZTestModel &model, ZTestContext &context)
@@ -87,7 +92,10 @@ public:
 
     _test_thread.detach();
   }
-
+  /**
+   * @description: 执行指定名称的测试用例
+   * @param test_name 要执行的测试用例名称
+   */
   void runSelectedTest(const std::string &test_name) {
     if (!_model.tryStartRunning()) {
       std::cout << "[INFO] Another test is already running." << std::endl;
@@ -127,7 +135,7 @@ private:
   std::thread _test_thread;
   bool isRunning() const { return _model._is_running.load(); }
 };
-
+// 作为 MVC 架构中的视图层，负责 UI 渲染和用户交互。
 class ZTestView {
 public:
   // ZTestView() {
@@ -149,7 +157,10 @@ public:
     renderResourceMonitor();
     renderAIAnalysisWindow(model);
   }
-
+  /**
+   * @description: 设置关联的窗口句柄
+   * @param window GLFW窗口指针
+   */
   void setWindow(GLFWwindow *window) { _window = window; }
   void applyTheme() {
     ImGuiStyle &style = ImGui::GetStyle();
@@ -198,7 +209,7 @@ private:
     }
     return result;
   }
-  // Platform-specific resource monitoring
+
   float getCpuUsage() {
     std::ifstream stat("/proc/stat");
     std::string line;
@@ -255,7 +266,6 @@ private:
         ImGui::EndMenu();
       }
 
-      // Add Theme menu
       if (ImGui::BeginMenu("Theme")) {
         if (ImGui::MenuItem("Dark", nullptr, _current_theme == Theme::Dark)) {
           _current_theme = Theme::Dark;
@@ -286,15 +296,12 @@ private:
     ImVec2 contentSize = ImGui::GetContentRegionAvail();
     const float plotHeight = contentSize.y * 1.0f;
 
-    // Calculate centered width (80% of available width)
     const float totalWidth = contentSize.x * 0.8f;
     const float plotWidth = totalWidth / 2 - ImGui::GetStyle().ItemSpacing.x;
 
-    // Horizontal centering container
     ImGui::SetCursorPosX((contentSize.x - totalWidth) * 0.5f);
     ImGui::BeginGroup();
 
-    // CPU Plot
     ImPlot::SetNextAxesLimits(0, maxHistorySize, 0, 100, ImPlotCond_Always);
     if (ImPlot::BeginPlot("##CPU", "Time", "Usage %",
                           ImVec2(plotWidth, plotHeight))) {
@@ -305,7 +312,6 @@ private:
 
     ImGui::SameLine();
 
-    // Memory Plot
     ImPlot::SetNextAxesLimits(0, maxHistorySize, 0, 100, ImPlotCond_Always);
     if (ImPlot::BeginPlot("##Memory", "Time", "Usage %",
                           ImVec2(plotWidth, plotHeight))) {
@@ -324,11 +330,15 @@ private:
     while (std::getline(meminfo, line)) {
       if (line.find("MemTotal:") == 0) {
         sscanf(line.c_str(), "MemTotal: %ld kB", &total);
-        return total / 1048576.0f; // Convert to GB
+        return total / 1048576.0f;
       }
     }
     return 0.0f;
   }
+  /**
+   * @description: 渲染AI分析窗口
+   * @param model 测试模型引用
+   */
   void renderAIAnalysisWindow(ZTestModel &model) {
     static std::string ai_prompt =
         "Please analyze the test result and suggest improvements.";
@@ -342,7 +352,6 @@ private:
 
     ImGui::Begin("AI Analysis", &show_ai_window);
 
-    // Test info display
     if (!model._selected_test.empty()) {
       auto test_result =
           ZTestResultManager::getInstance().getResult(model._selected_test);
@@ -353,10 +362,9 @@ private:
       ImGui::Separator();
     }
 
-    static char file_path_buffer[1024] = ""; // Adjust size as needed
-    static char prompt_buffer[4096] = "";    // Adjust size as needed
+    static char file_path_buffer[1024] = "";
+    static char prompt_buffer[4096] = "";
 
-    // Sync buffers with strings before rendering
     strncpy(file_path_buffer, test_file_path.c_str(),
             sizeof(file_path_buffer) - 1);
     file_path_buffer[sizeof(file_path_buffer) - 1] = '\0';
@@ -364,7 +372,6 @@ private:
     strncpy(prompt_buffer, ai_prompt.c_str(), sizeof(prompt_buffer) - 1);
     prompt_buffer[sizeof(prompt_buffer) - 1] = '\0';
 
-    // Use ImGui InputText with char buffer
     ImGui::Text("File Path:");
     ImGui::InputTextWithHint("##file_path", "file path", file_path_buffer,
                              sizeof(file_path_buffer),
@@ -372,42 +379,37 @@ private:
     ImGui::Text("Prompt:");
     ImGui::InputTextMultiline("##prompt", prompt_buffer, sizeof(prompt_buffer),
                               ImVec2(-1, 100));
-    // Sync back to std::string after rendering
+
     test_file_path = file_path_buffer;
     ai_prompt = prompt_buffer;
-    // Analyze button
+
     if (ImGui::Button("Analyze", ImVec2(-1, 30)) && !is_analyzing) {
       if (!model._selected_test.empty()) {
         is_analyzing = true;
         ai_response.clear();
         error_message.clear();
 
-        // Start AI analysis in background thread
         std::thread([&, test_name = model._selected_test, prompt = ai_prompt,
                      file_path = test_file_path]() {
           try {
-            // Get test result data
+
             auto test_result =
                 ZTestResultManager::getInstance().getResult(test_name);
 
-            // Build context string
             std::ostringstream oss;
             oss << "Test Name: " << test_result.getName() << "\n"
                 << "Status: " << toString(test_result.getState()) << "\n"
                 << "Used Time: " << test_result.getUsedTime() << " ms\n"
                 << "Iterations: " << test_result.getIterations() << "\n";
 
-            // Add file content if path provided
             if (!file_path.empty()) {
               oss << "\n=== TEST FILE CONTENT ===\n";
               oss << readFileContent(file_path);
               oss << "\n=== END OF FILE ===\n";
             }
 
-            // Add user prompt
             oss << "Prompt: " << prompt;
 
-            // Call AI API
             ai_response = call_qwen_api(
                 oss.str() + "The result should be in commonmark format.",
                 getApiKey());
@@ -425,7 +427,6 @@ private:
       }
     }
 
-    // Display status and results
     if (is_analyzing) {
       ImGui::Text("Analyzing...");
       ImGui::ProgressBar(0.0f, ImVec2(-1, 0));
@@ -459,7 +460,6 @@ private:
   void renderTestList(ZTestModel &model, ZTestController &controller) {
     ImGui::Begin("Test Cases", nullptr);
 
-    // Filter controls
     static char filterText[128] = "";
     ImGui::InputTextWithHint("##Filter", "Search tests...", filterText,
                              IM_ARRAYSIZE(filterText));
@@ -470,7 +470,6 @@ private:
                  "All\0Passed\0Failed\0Not Run\0");
     ImGui::SameLine();
 
-    // Sorting controls
     enum SortMode { SORT_NAME, SORT_STATUS, SORT_TIME };
     static int sortMode = SORT_NAME;
     static bool sortAscending = true;
@@ -500,10 +499,8 @@ private:
           buttonWidth * 2 + ImGui::GetStyle().ItemSpacing.x;
       const float horizontalOffset = (totalWidth - totalButtonsWidth) * 0.5f;
 
-      // Apply horizontal centering
       ImGui::SetCursorPosX(ImGui::GetCursorPosX() + horizontalOffset);
 
-      // Run All button
       ImGui::PushStyleColor(
           ImGuiCol_Button, model._is_running
                                ? ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled)
@@ -516,7 +513,6 @@ private:
 
       ImGui::SameLine();
 
-      // Run Selected button
       const bool hasSelection = !model._selected_test.empty();
       ImGui::PushStyleColor(
           ImGuiCol_Button, (!hasSelection || model._is_running)
@@ -534,15 +530,13 @@ private:
     std::lock_guard<std::mutex> lock(model._mutex);
     auto allResults = ZTestResultManager::getInstance().getResults();
 
-    // Filter and sort tests
     std::vector<ZTestResult> filteredTests;
     for (const auto &[name, result] : allResults) {
-      // Text filter
+
       if (filterText[0] != '\0' && name.find(filterText) == std::string::npos) {
         continue;
       }
 
-      // State filter
       switch (filterState) {
       case 1:
         if (result.getState() != ZState::z_success)
@@ -561,7 +555,6 @@ private:
       filteredTests.push_back(result);
     }
 
-    // Sorting logic
     std::sort(filteredTests.begin(), filteredTests.end(),
               [&](const ZTestResult &a, const ZTestResult &b) {
                 switch (sortMode) {
@@ -578,7 +571,6 @@ private:
                 return false;
               });
 
-    // Group by suite after sorting
     std::map<std::string, std::vector<ZTestResult>> suiteMap;
     for (const auto &test : filteredTests) {
       size_t dotPos = test.getName().find('.');
@@ -588,11 +580,9 @@ private:
       suiteMap[suiteName].push_back(test);
     }
 
-    // Style improvements
     ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, {8, 4});
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, {4, 4});
 
-    // Performance optimization
     ImGuiListClipper clipper;
     clipper.Begin(suiteMap.size());
 
@@ -631,7 +621,6 @@ private:
             for (const auto &test : tests) {
               ImGui::TableNextRow();
 
-              // Test name column
               ImGui::TableSetColumnIndex(0);
               ImGui::Selectable(test.getName().c_str(),
                                 model._selected_test == test.getName(),
@@ -641,7 +630,6 @@ private:
                 model._selected_test = test.getName();
               }
 
-              // Context menu
               if (ImGui::BeginPopupContextItem()) {
                 if (ImGui::MenuItem("Run Test")) {
                   controller.runSelectedTest(test.getName());
@@ -652,14 +640,12 @@ private:
                 ImGui::EndPopup();
               }
 
-              // Status column
               ImGui::TableSetColumnIndex(1);
               ImGui::TextColored(getStateColor(test.getState()), "%s",
                                  test.getState() == ZState::z_unknown
                                      ? "Not Run"
                                      : toString(test.getState()));
 
-              // Time column
               ImGui::TableSetColumnIndex(2);
               ImGui::Text("%.2f", test.getUsedTime());
             }
@@ -732,7 +718,6 @@ private:
       float cpu_usage = _cpu_history.empty() ? 0.0f : _cpu_history.back();
       float mem_usage = _memory_history.empty() ? 0.0f : _memory_history.back();
 
-      // Add color-coded resource indicators
       ImVec4 cpuColor = (cpu_usage > 80.0f)   ? ImVec4(1, 0, 0, 1)
                         : (cpu_usage > 50.0f) ? ImVec4(1, 1, 0, 1)
                                               : ImVec4(0, 1, 0, 1);
@@ -798,7 +783,6 @@ inline int showUI() {
   if (!glfwInit())
     return 1;
 
-// Decide GL+GLSL versions
 #if defined(IMGUI_IMPL_OPENGL_ES2)
   // GL ES 2.0 + GLSL 100 (WebGL 1.0)
   const char *glsl_version = "#version 100";
@@ -858,8 +842,8 @@ inline int showUI() {
       "Hack-Regular.ttf", 25.0f, nullptr, io.Fonts->GetGlyphRangesJapanese());
   // Initialize ImGui backends
   ImGui_ImplGlfw_InitForOpenGL(window, true);
-  ImGui_ImplOpenGL3_Init(glsl_version); // Use the actual glsl_version
-                                        // variable 初始化测试上下文
+  ImGui_ImplOpenGL3_Init(glsl_version);
+  // variable 初始化测试上下文
   // InitializeTestContext(testContext); // 添加测试用例
   // 初始化MVC组件
 

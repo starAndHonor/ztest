@@ -11,6 +11,7 @@
 \usepackage{caption} % 用于添加表格标题
 \usepackage[table]{xcolor} % 用于设置表格颜色
 \usepackage{float}
+
 \usepackage{subcaption}
 \usepackage{tabularx}
 \usepackage{tcolorbox}
@@ -21,7 +22,7 @@
 \usepackage{hyperref} 
 \usepackage{framed}
 \usetikzlibrary{positioning} % 加载positioning库
-\renewcommand{\refname}{Reference}
+\renewcommand{\refname}{}
 
 \hypersetup{
     colorlinks=true, % 使用颜色而不是边框
@@ -61,17 +62,20 @@
     % \vspace{1.5cm}
     \fontsize{24pt}{32pt}\selectfont
     \textbf{《High-level Language Programming Project》 Report}
-    \vspace{6cm}
+    \vspace{4cm}
 
-    \fontsize{20pt}{20pt}\selectfont
-    \begin{tabular}{ll}
-        Project Name:    & Ztest: A C++ Unit Testing Framework \\
-                         &                                     \\
-        School       :   & \hspace{6cm}                        \\
-        Major        :   & \hspace{6cm}                        \\
-        Student Name :   & \hspace{6cm}                        \\
-        Teacher      :   & \hspace{6cm}                        \\
-        Submission Date: & \hspace{6cm}                        \\
+    \centering
+    Ztest: A C++ Unit Testing Framework
+    \vspace{2cm}
+
+    \fontsize{16pt}{16pt}\selectfont
+    \begin{tabular}{ll}                                                                \\
+        School       :   & School of Future Technology\hspace{6cm}          \\
+        Major        :   & Data Science and Big Data Technology\hspace{6cm} \\
+        Student Name :   & Zheng Chenyang,Ye Suohua,Wu Hongqing,            \\
+                         & Qi Yansong,Wang Ruizhen                          \\
+        Teacher      :   & Zhang Huaidong\hspace{6cm}                       \\
+        Submission Date: & 2025.6.6\hspace{6cm}                             \\
     \end{tabular}
 
     \vfill
@@ -223,6 +227,18 @@ Options:
 \newpage
 \section{程序分析}
 \subsection{ 系统关键问题}
+\subsubsection{优秀架构设计}
+ztest使用了核心模块分层架构，具体如下
+\begin{itemize}
+    \item 基础层：提供测试框架的基本功能，如测试用例注册、测试执行、测试结果管理、日志输出等。
+    \item 执行层：负责测试用例的运行，包括测试用例的注册、执行、结果管理、日志输出等。
+    \item 数据层：实现参数化测试数据驱动，提供测试用例的数据源。
+    \item 报告层：提供多格式报告输出，如HTML、JSON、XML等。
+    \item 并发层：封装线程池管理并行执行，提高测试效率。
+\end{itemize}
+\subsubsection{程序设计思想的运用}
+在实现过程中ztest使用了面向对象编程，泛型编程，函数式编程，并发编程，元编程等五种编程范式。
+
 \subsubsection{提升测试运行效率}
 传统的C++测试框架(如gtest,catch2)多使用顺序运行测试的方法执行所有测试,导致测试时间较长,降低了生产效率。同时vibe coding的出现导致编写测试用例的时间大大降低,而运行测试用例的时间仍然没有大的降低。
 我们将任务分为四个类别：短测试时间且更关注结果正确性的任务,如加法运算、字符串拼接和用户登录验证；长测试时间且更关注结果正确性的任务,如合并多个文件、复杂字符串匹配与替换和大量数据排序结果验证；短测试时间且更关注运行过程评估的任务,如读取或写入大文件、低复杂度算法性能测试和数据库查询；以及长测试时间且更关注运行过程评估的任务,如多线程处理任务、压力测试和时间复杂度高算法测试。
@@ -242,10 +258,11 @@ Options:
 \subsection{ 职责分配}
 % 在这里填写每个学生的职责分配
 \begin{itemize}[leftmargin=*]
-    \item 学生1: [任务1]
-    \item 学生2: [任务2]
-    \item 学生3: [任务3]
-          % 根据实际情况继续添加
+    \item 郑辰阳: 架构设计，ztest core和gui主要代码编写，报告撰写和答辩
+    \item 叶穗华: GUI的改进，部分测试逻辑的改进
+    \item 吴泓庆：GUI的改进
+    \item 齐彦松: GUI的改进
+    \item 王瑞箐：迁移到windows上的尝试
 \end{itemize}
 
 \section{技术路线}
@@ -292,10 +309,10 @@ ZTest的核心架构流程开始于测试定义阶段，测试(包括ZTest Suite
 \end{figure}
 \subsubsection{GUI框架}
 GUI框架使用MCV架构开发，其中Model层负责数据处理，其中包含了对于Ztest core的进一步封装，View层负责界面绘制，主要是使用ImGui框架绘制，Controller层负责用户交互，将用户在UI界面上的点击和筛选等操作转换成对Model层和View层的调用，从而实现用户界面的更新和数据的更新。
-\newpage
+\subsubsection{整体类图}
 \begin{figure}[H]
     \centering
-    \includegraphics[angle=270,width=0.7\textwidth]{img/class.png} % 假设logo.png是学校标志的图片文件
+    \includegraphics[angle=270,width=0.6\textwidth]{img/class.png} % 假设logo.png是学校标志的图片文件
     \caption{ ztest class}
     \label{fig:ztest class }
 \end{figure}
@@ -398,21 +415,21 @@ GUI框架使用MCV架构开发，其中Model层负责数据处理，其中包含
 \section{编程进度}
 \begin{table}[H]
     \centering
-    \begin{tabular}{|l|l|}
+    \begin{tabular}{|l|l|l|l|}
         \toprule
-        \textbf{任务阶段}                          & \textbf{计划}                       \\ \midrule
-        \textbf{确定主题} 2024.04.26-2024.05.03    & 调查主题,提交提案。                        \\ \midrule
-        \textbf{实现核心代码} 2024.05.03-2024.05.05  & 实现了GUI和Safe test和Unsafe test的执行逻辑 \\ \midrule
-        \textbf{重大性能优化} 2024.05.05-2024.05.08  & 线程池优化                             \\ \midrule
-        功能优化 2024.05.08-2024.05.11             & 完善JSON，HTML输出，JUnit格式输出,CI集成      \\ \midrule
-        功能优化 2024.05.11-2024.05.13             & GUI引入了imgui Docking功能             \\ \midrule
-        功能优化 2024.05.13-2024.05.15             & 增加CLI                             \\ \midrule
-        \textbf{重大功能优化} 2024.05.15-2024.05.24  & 增加BENCHMARK测试                     \\ \midrule
-        功能优化 2024.05.24-2024.05.25             & 增加了设备状态监测和可视化                     \\ \midrule
-        \textbf{重大功能优化} 2024.05.25-2024.05.28  & 增加了参数化测试并增加了数据驱动                  \\ \midrule
-        \textbf{重大性能优化} 2024.05.28-2024.06.02  & 增加了对数据的缓存和LRU缓存淘汰技术               \\ \midrule
-        \textbf{重大功能优化}  2024.06.02-2024.06.07 & 添加了AI诊断                           \\ \midrule
-        总结工作 2024.6.02-2024.06.08              & 跨平台移植 \& 报告撰写                     \\
+        \textbf{任务阶段}   & \textbf{时间}           & \textbf{计划}                       & \textbf{实际情况} \\ \midrule
+        \textbf{确定主题}   & 2024.04.26-2024.05.03 & 调查主题,提交提案。                        & 已完成           \\ \midrule
+        \textbf{实现核心代码} & 2024.05.03-2024.05.05 & 实现了GUI和Safe test和Unsafe test的执行逻辑 & 已完成           \\ \midrule
+        \textbf{重大性能优化} & 2024.05.05-2024.05.08 & 线程池优化                             & 已完成           \\ \midrule
+        功能优化            & 2024.05.08-2024.05.11 & 完善JSON，HTML输出，JUnit格式输出,CI集成      & 已完成           \\ \midrule
+        功能优化            & 2024.05.11-2024.05.13 & GUI引入了imgui Docking功能             & 已完成           \\ \midrule
+        功能优化            & 2024.05.13-2024.05.15 & 增加CLI                             & 已完成           \\ \midrule
+        \textbf{重大功能优化} & 2024.05.15-2024.05.24 & 增加BENCHMARK测试                     & 已完成           \\ \midrule
+        功能优化            & 2024.05.24-2024.05.25 & 增加了设备状态监测和可视化                     & 已完成           \\ \midrule
+        \textbf{重大功能优化} & 2024.05.25-2024.05.28 & 增加了参数化测试并增加了数据驱动                  & 已完成           \\ \midrule
+        \textbf{重大性能优化} & 2024.05.28-2024.06.02 & 增加了对数据的缓存和LRU缓存淘汰技术               & 已完成           \\ \midrule
+        \textbf{重大功能优化} & 2024.06.02-2024.06.04 & 添加了AI诊断                           & 已完成           \\ \midrule
+        总结工作            & 2024.6.04-2024.06.05  & 跨平台移植 \& 报告撰写                     & 已完成           \\
         \bottomrule
     \end{tabular}
     \caption{编程进度}
@@ -646,7 +663,7 @@ ZBENCHMARK(Matrix, PushBack, 20000) {
     \caption{xml(JUnit格式)报告}
     \label{fig: 数据驱动 function test}
 \end{figure}
-\subsubsection{GUI展示}
+\subsubsection{GUI测试}
 测试了GUI的展示，主题的切换，AI助手展示等功能。
 \begin{figure}[H]
     \centering
@@ -667,7 +684,6 @@ ZBENCHMARK(Matrix, PushBack, 20000) {
     \caption{AI诊断助手展示}
     \label{fig: 数据驱动 function test}
 \end{figure}
-\newpage
 \subsubsection{AI诊断测试}
 生成报告的时候，调用AI(qwen turbo)进行诊断，并写入到HTML报告中。
 \begin{figure}[H]
@@ -688,7 +704,15 @@ ZBENCHMARK(Matrix, PushBack, 20000) {
 
 
 \section{个人总结}
-% 在这里写下你的收获、建议等内容
+\begin{tabular}{|p{50pt}|p{350pt}|}
+    \hline
+    人名  & 心得                                                                                                                                                                                                                                                                                \\ \hline
+    郑辰阳 & 测试框架设计实现过程深刻体会模块化设计和分层架构重要性，引入 MVC 模式实现模型、视图、控制器清晰分离，提高代码可维护性和扩展性。多线程环境下优化资源监控和任务调度，保障系统稳定性和性能，结合 AI 分析能力，为测试结果提供智能化反馈，增强工具实用性，开发过程强化技术深度，更注重团队协作与沟通效率，未来将持续迭代，完善功能，提升用户体验。                                                                                                       \\ \hline
+    叶穗华 & 本次 program，主要负责前端部分，选择 imgui 库进行前端编写，顺利完成前端架构和绘制，体会到前端结构需依使用者需求设计，要考虑跨平台、库文件版本等因素。                                                                                                                                                                                                \\ \hline
+    齐彦松 & 参与 “ztest” 单元测试框架开发，感受所学知识能用于游戏制作和工具软件设计， ztest 作为轻量、易用的 C++ 测试框架，解决了 Google Test 等现有框架在 GUI 支持、并发测试和报告系统上的不足，通过创新设计提升用户体验和扩展性。欣赏团队实现多种测试用例创建方式，体现 “用户友好” 理念，多线程安全评测设计使其意识到并发问题复杂性及分类处理重要性，通过实践深入了解 C++ 现代特性和设计模式，此次经历提升技术能力，认识到优秀软件产品需兼顾技术深度和用户体验，团队高效沟通协作是关键，期待继续探索工程实践挑战与解决方案。 \\ \hline
+    王瑞箐 & 经历本次大作业成长颇多，这是一规模较大、复杂程度高的项目，面临很大挑战，因时间问题只能实践中学习，虽仓促、对很多东西一知半解，但也收获众多知识，掌握新技能，锻炼处理问题能力。                                                                                                                                                                                           \\ \hline
+    吴泓庆 & 在 zTest 项目负责 GUI 设计工作，技术上掌握 MVC 架构实践运用，借助 ImGui 框架实现可视化界面，设计简单可视化窗口，协调 ZTestModel、ZTestView、ZTestController 3 个类处理数据可视化，提升用户友好度。团队协作中提高团队合作能力，与团队程序确定接口推进项目，规范项目不同类实现，防止编译错误，降低理解难度。                                                                                              \\ \hline
+\end{tabular}
 
 \section{参考文献}
 \begin{thebibliography}{99}

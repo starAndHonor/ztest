@@ -1,4 +1,3 @@
-
 #pragma once
 #include "ztest_types.hpp"
 #include <bits/unique_ptr.h>
@@ -41,37 +40,60 @@ public:
   virtual void setState(ZState state) { _state = state; }
 
   virtual const string getDescription() const { return _description; }
-
+  /**
+   * @description: 设置测试用例的描述信息
+   * @param description 要设置的描述
+   */
   virtual void setDescription(string description) {
     _description = description;
   }
-
+  /**
+   * @description: 添加测试前的钩子函数
+   * @param hook 要添加的钩子函数
+   * @return 当前测试用例对象的引用
+   */
   virtual ZTestBase &addBeforeAll(function<void()> hook) {
     _before_all_hooks.push_back(move(hook));
     return *this;
   }
-
+  /**
+   * @description: 执行所有测试前的钩子函数
+   */
   virtual void runBeforeAll() {
     for (auto &hook : _before_all_hooks) {
       hook();
     }
   }
-
+  /**
+   * @description: 添加每个测试后的钩子函数
+   * @param hook 要添加的钩子函数
+   * @return 当前测试用例对象的引用
+   */
   virtual ZTestBase &addAfterEach(function<void()> hook) {
     _after_each_hooks.push_back(move(hook));
     return *this;
   }
-
+  /**
+   * @description: 执行所有每个测试后的钩子函数
+   */
   virtual void runAfterEach() {
     for (auto &hook : _after_each_hooks) {
       hook();
     }
   }
+  /**
+   * @description: 执行所有测试后的钩子函数
+   */
   virtual void runAfterAll() {
     for (auto &hook : _after_all_hooks) {
       hook();
     }
   }
+  /**
+   * @description: 添加测试后的钩子函数
+   * @param hook 要添加的钩子函数
+   * @return 当前测试用例对象的引用
+   */
   virtual ZTestBase &addAfterAll(function<void()> hook) {
     _after_all_hooks.push_back(move(hook));
     return *this;
