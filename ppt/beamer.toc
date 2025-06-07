@@ -1,5 +1,2 @@
 \beamer@sectionintoc {1}{项目概述}{2}{0}{1}
 \beamer@sectionintoc {2}{系统设计}{4}{0}{2}
-\beamer@sectionintoc {3}{关键技术}{9}{0}{3}
-\beamer@sectionintoc {4}{测试与成果}{15}{0}{4}
-\beamer@sectionintoc {5}{总结}{18}{0}{5}

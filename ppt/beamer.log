@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999995 (TeX Live 2023/Debian) (preloaded format=xelatex 2025.4.16)  6 JUN 2025 18:13
+This is XeTeX, Version 3.141592653-2.6-0.999995 (TeX Live 2023/Debian) (preloaded format=xelatex 2025.4.16)  7 JUN 2025 13:49
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -837,7 +837,7 @@ Package fontspec Info: Font family 'FandolHei-Regular(0)' created for font
 (fontspec)             <->"[FandolHei-Bold.otf]/OT:language=dflt;"
 (fontspec)             - 'bold small caps'  (b/sc) with NFSS spec.: 
 
-No file beamer.aux.
+(./beamer.aux)
 \openout1 = `beamer.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 26.
@@ -860,6 +860,7 @@ LaTeX Font Info:    Checking defaults for PD1/pdf/m/n on input line 26.
 LaTeX Font Info:    ... okay on input line 26.
 LaTeX Font Info:    Checking defaults for PU/pdf/m/n on input line 26.
 LaTeX Font Info:    ... okay on input line 26.
+
 *geometry* driver: auto-detecting
 *geometry* detected driver: xetex
 *geometry* verbose mode - [ preamble ] result:
@@ -895,11 +896,9 @@ LaTeX Font Info:    ... okay on input line 26.
 * (1in=72.27pt=25.4mm, 1cm=28.453pt)
 
 Package hyperref Info: Link coloring ON on input line 26.
+(./beamer.out) (./beamer.out)
 \@outlinefile=\write5
 \openout5 = `beamer.out'.
-
-
-Package hyperref Warning: Rerun to get /PageLabels entry.
 
 LaTeX Font Info:    Overwriting symbol font `operators' in version `normal'
 (Font)                  OT1/cmr/m/n --> OT1/cmss/m/n on input line 26.
@@ -943,7 +942,7 @@ LaTeX Font Info:    Overwriting math alphabet `\mathit' in version `bold'
 (Font)                  TU/lmss/m/it --> TU/lmss/b/it on input line 26.
 LaTeX Font Info:    Overwriting math alphabet `\mathtt' in version `bold'
 (Font)                  TU/lmtt/m/n --> TU/lmtt/b/n on input line 26.
-(/usr/share/texlive/texmf-dist/tex/latex/translator/translator-basic-dictionary-English.dict
+ (/usr/share/texlive/texmf-dist/tex/latex/translator/translator-basic-dictionary-English.dict
 Dictionary: translator-basic-dictionary, Language: English 
 ) (/usr/share/texlive/texmf-dist/tex/latex/translator/translator-bibliography-dictionary-English.dict
 Dictionary: translator-bibliography-dictionary, Language: English 
@@ -1033,7 +1032,7 @@ Overfull \hbox (109.13536pt too wide) has occurred while \output is active
 [1
 
 ]
-Overfull \hbox (109.13536pt too wide) in paragraph at lines 49--49
+Overfull \hbox (109.13536pt too wide) in paragraph at lines 52--52
  [][]  \TU/lmss/m/n/6 ([])  
  []
 
@@ -1045,42 +1044,42 @@ Overfull \hbox (109.13536pt too wide) has occurred while \output is active
 [2
 
 ]
-Overfull \hbox (109.13536pt too wide) in paragraph at lines 67--67
+Overfull \hbox (109.13536pt too wide) in paragraph at lines 70--70
  [][]  \TU/lmss/m/n/6 ([])  
  []
 
 (/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsa.fd) (/usr/share/texlive/texmf-dist/tex/latex/amsfonts/umsb.fd)
-Underfull \hbox (badness 6608) in paragraph at lines 67--67
+Underfull \hbox (badness 6608) in paragraph at lines 70--70
 []|\TU/lmss/bx/n/10.95 GUI \TU/FandolHei-Regular(0)/b/n/10.95 支
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 67--67
+Underfull \hbox (badness 10000) in paragraph at lines 70--70
 []|\TU/FandolHei-Regular(0)/b/n/10.95 并 发 测
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 67--67
+Underfull \hbox (badness 10000) in paragraph at lines 70--70
 []|\TU/FandolHei-Regular(0)/b/n/10.95 报 告 系
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 67--67
+Underfull \hbox (badness 10000) in paragraph at lines 70--70
 []|\TU/FandolHei-Regular(0)/b/n/10.95 数 据 驱
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 67--67
+Underfull \hbox (badness 10000) in paragraph at lines 70--70
 []|\TU/lmss/m/n/10.95 Eclipse
  []
 
 
-Overfull \hbox (15.90485pt too wide) in paragraph at lines 67--67
+Overfull \hbox (15.90485pt too wide) in paragraph at lines 70--70
 []|\TU/lmss/m/n/10.95 HTML/XML| 
  []
 
 
-Underfull \hbox (badness 10000) in paragraph at lines 67--67
+Underfull \hbox (badness 10000) in paragraph at lines 70--70
 []|\TU/FandolHei-Regular(0)/m/n/10.95 第 三 方
  []
 
@@ -1092,7 +1091,7 @@ Overfull \hbox (109.13536pt too wide) has occurred while \output is active
 [3
 
 ]
-Overfull \hbox (109.13536pt too wide) in paragraph at lines 76--76
+Overfull \hbox (109.13536pt too wide) in paragraph at lines 79--79
  [][]  \TU/lmss/m/n/6 ([])  
  []
 
@@ -1106,7 +1105,7 @@ Overfull \hbox (109.13536pt too wide) has occurred while \output is active
 [4
 
 ]
-Overfull \hbox (109.13536pt too wide) in paragraph at lines 84--84
+Overfull \hbox (109.13536pt too wide) in paragraph at lines 87--87
  [][]  \TU/lmss/m/n/6 ([])  
  []
 
@@ -1118,480 +1117,6 @@ Overfull \hbox (109.13536pt too wide) has occurred while \output is active
  []
 
 [5
-
-]
-Overfull \hbox (109.13536pt too wide) in paragraph at lines 92--92
- [][]  \TU/lmss/m/n/6 ([])  
- []
-
-File: img/core.png Graphic file (type bmp)
-<img/core.png>
-
-Overfull \hbox (109.13536pt too wide) has occurred while \output is active
- [][]  \TU/lmss/m/n/6 ([])  
- []
-
-[6
-
-]
-Overfull \hbox (109.13536pt too wide) in paragraph at lines 100--100
- [][]  \TU/lmss/m/n/6 ([])  
- []
-
-File: img/guiarch.png Graphic file (type bmp)
-<img/guiarch.png>
-
-Overfull \hbox (109.13536pt too wide) has occurred while \output is active
- [][]  \TU/lmss/m/n/6 ([])  
- []
-
-[7
-
-]
-Overfull \hbox (109.13536pt too wide) in paragraph at lines 108--108
- [][]  \TU/lmss/m/n/6 ([])  
- []
-
-File: img/class.png Graphic file (type bmp)
-<img/class.png>
-
-Overfull \hbox (109.13536pt too wide) has occurred while \output is active
- [][]  \TU/lmss/m/n/6 ([])  
- []
-
-[8
-
-]
-Overfull \hbox (109.13536pt too wide) in paragraph at lines 129--129
- [][]  \TU/lmss/m/n/6 ([])  
- []
-
-
-./beamer.tex:129: LaTeX Error: Environment lstlisting undefined.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.129 \end{frame}
-                 
-Your command was ignored.
-Type  I <command> <return>  to replace it with another command,
-or  <return>  to continue without it.
-
-
-Package fontspec Warning: Font "FandolFang-Regular" does not contain requested
-(fontspec)                Script "CJK".
-
-
-Package fontspec Info: Font family 'FandolFang-Regular(0)' created for font
-(fontspec)             'FandolFang-Regular' with options
-(fontspec)             [Script={CJK},Extension={.otf}].
-(fontspec)              
-(fontspec)              This font family consists of the following NFSS
-(fontspec)             series/shapes:
-(fontspec)              
-(fontspec)             - 'normal' (m/n) with NFSS spec.:
-(fontspec)             <->"[FandolFang-Regular.otf]/OT:language=dflt;"
-(fontspec)             - 'small caps'  (m/sc) with NFSS spec.: 
-
-./beamer.tex:129: Missing $ inserted.
-<inserted text> 
-                $
-l.129 \end{frame}
-                 
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-LaTeX Font Info:    Font shape `TU/lmss/m/it' in size <10> not available
-(Font)              Font shape `TU/lmss/m/sl' tried instead on input line 129.
-LaTeX Font Info:    Font shape `TU/lmss/m/it' in size <7> not available
-(Font)              Font shape `TU/lmss/m/sl' tried instead on input line 129.
-LaTeX Font Info:    Font shape `TU/lmss/m/it' in size <5> not available
-(Font)              Font shape `TU/lmss/m/sl' tried instead on input line 129.
-./beamer.tex:129: Double subscript.
-\beamer@doifinframe ...ame, data) { ... } ZTEST_P_
-                                                  CSV(SuiteName, TestName, "...
-l.129 \end{frame}
-                 
-I treat `x_1_2' essentially like `x_1{}_2'.
-
-
-./beamer.tex:129: LaTeX Error: \begin{minipage} on input line 129 ended by \end{lstlisting}.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.129 \end{frame}
-                 
-Your command was ignored.
-Type  I <command> <return>  to replace it with another command,
-or  <return>  to continue without it.
-
-./beamer.tex:129: Missing $ inserted.
-<inserted text> 
-                $
-l.129 \end{frame}
-                 
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
-
-
-Overfull \hbox (449.12741pt too wide) in paragraph at lines 129--129
-\TU/lmtt/m/n/10 ZTEST$[]\OT1/cmr/m/n/10 ([][][][][][][][][]\OML/cmm/m/it/10 ; [][][][][][][][]; [][][][]\OT1/cmr/m/n/10 /[][][][][][])[][][][][][][][][][][]([][][][][][][][][]\OML/cmm/m/it/10 ; [][][][][][][][]; [][][][][][][][][][]\OT1/cmr/m/n/10 )[][][][][][][]([][][][][][][][][]\OML/cmm/m/it/10 ; [][][][][][][][]; [][][][]\OT1/cmr/m/n/10 )[][][][][][][][][][]([][][][][][][][][]\OML/cmm/m/it/10 ; [][][][][][][][]; [][][][][]:[][][][]\OT1/cmr/m/n/10 )[]$  
- []
-
-
-./beamer.tex:129: LaTeX Error: Environment lstlisting undefined.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.129 \end{frame}
-                 
-Your command was ignored.
-Type  I <command> <return>  to replace it with another command,
-or  <return>  to continue without it.
-
-./beamer.tex:129: Missing $ inserted.
-<inserted text> 
-                $
-l.129 \end{frame}
-                 
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-./beamer.tex:129: Undefined control sequence.
-\beamer@doifinframe ...[]() { logger.info("Init\n 
-                                                  "); }) .afterEach([]() { l...
-l.129 \end{frame}
-                 
-The control sequence at the end of the top line
-of your error message was never \def'ed. If you have
-misspelled it (e.g., `\hobx'), type `I' and the correct
-spelling (e.g., `I\hbox'). Otherwise just continue,
-and I'll forget about whatever was undefined.
-
-./beamer.tex:129: Undefined control sequence.
-\beamer@doifinframe ...]() { logger.info("Clean\n 
-                                                  "); }).build(); \end {lstl...
-l.129 \end{frame}
-                 
-The control sequence at the end of the top line
-of your error message was never \def'ed. If you have
-misspelled it (e.g., `\hobx'), type `I' and the correct
-spelling (e.g., `I\hbox'). Otherwise just continue,
-and I'll forget about whatever was undefined.
-
-
-./beamer.tex:129: LaTeX Error: \begin{minipage} on input line 129 ended by \end{lstlisting}.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.129 \end{frame}
-                 
-Your command was ignored.
-Type  I <command> <return>  to replace it with another command,
-or  <return>  to continue without it.
-
-./beamer.tex:129: Missing $ inserted.
-<inserted text> 
-                $
-l.129 \end{frame}
-                 
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
-
-
-Overfull \hbox (160.95485pt too wide) in paragraph at lines 129--129
-[][][][][]\OML/cmm/m/it/10 ; [][]; [][][]; \OT1/cmr/m/n/10 2\OML/cmm/m/it/10 ; \OT1/cmr/m/n/10 3)\OML/cmm/m/it/10 :[][][][][][][][][][][][][][][][][]\OT1/cmr/m/n/10 (5)\OML/cmm/m/it/10 :[][][][][][][][][]\OT1/cmr/m/n/10 ([]()[])\OML/cmm/m/it/10 :[][][][][][][][][]\OT1/cmr/m/n/10 ([]()[])\OML/cmm/m/it/10 :[][][][][]\OT1/cmr/m/n/10 ();$  
- []
-
-
-Overfull \hbox (109.13536pt too wide) has occurred while \output is active
- [][]  \TU/lmss/m/n/6 ([])  
- []
-
-[9
-
-]
-Overfull \hbox (109.13536pt too wide) in paragraph at lines 147--147
- [][]  \TU/lmss/m/n/6 ([])  
- []
-
-
-./beamer.tex:147: LaTeX Error: Environment lstlisting undefined.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.147 \end{frame}
-                 
-Your command was ignored.
-Type  I <command> <return>  to replace it with another command,
-or  <return>  to continue without it.
-
-./beamer.tex:147: Missing $ inserted.
-<inserted text> 
-                $
-l.147 \end{frame}
-                 
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-
-./beamer.tex:147: LaTeX Error: \begin{minipage} on input line 147 ended by \end{lstlisting}.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.147 \end{frame}
-                 
-Your command was ignored.
-Type  I <command> <return>  to replace it with another command,
-or  <return>  to continue without it.
-
-./beamer.tex:147: Missing $ inserted.
-<inserted text> 
-                $
-l.147 \end{frame}
-                 
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
-
-
-Overfull \hbox (109.13536pt too wide) has occurred while \output is active
- [][]  \TU/lmss/m/n/6 ([])  
- []
-
-[10
-
-]
-Overfull \hbox (109.13536pt too wide) in paragraph at lines 172--172
- [][]  \TU/lmss/m/n/6 ([])  
- []
-
-
-./beamer.tex:172: LaTeX Error: Environment lstlisting undefined.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.172 \end{frame}
-                 
-Your command was ignored.
-Type  I <command> <return>  to replace it with another command,
-or  <return>  to continue without it.
-
-./beamer.tex:172: Missing $ inserted.
-<inserted text> 
-                $
-l.172 \end{frame}
-                 
-I've inserted a begin-math/end-math symbol since I think
-you left one out. Proceed, with fingers crossed.
-
-./beamer.tex:172: Misplaced alignment tab character &.
-\beamer@doifinframe ...st, sum_test_data) { auto &
-                                                  &[inputs, expected] = _dat...
-l.172 \end{frame}
-                 
-I can't figure out why you would want to use a tab mark
-here. If you just want an ampersand, the remedy is
-simple: Just type `I\&' now. But if some right brace
-up above has ended a previous alignment prematurely,
-you're probably due for more error messages, and you
-might try typing `S' now just to see what is salvageable.
-
-./beamer.tex:172: Misplaced alignment tab character &.
-\beamer@doifinframe ...t, sum_test_data) { auto &&
-                                                  [inputs, expected] = _data...
-l.172 \end{frame}
-                 
-I can't figure out why you would want to use a tab mark
-here. If you just want an ampersand, the remedy is
-simple: Just type `I\&' now. But if some right brace
-up above has ended a previous alignment prematurely,
-you're probably due for more error messages, and you
-might try typing `S' now just to see what is salvageable.
-
-
-./beamer.tex:172: LaTeX Error: \begin{minipage} on input line 172 ended by \end{lstlisting}.
-
-See the LaTeX manual or LaTeX Companion for explanation.
-Type  H <return>  for immediate help.
- ...                                              
-                                                  
-l.172 \end{frame}
-                 
-Your command was ignored.
-Type  I <command> <return>  to replace it with another command,
-or  <return>  to continue without it.
-
-./beamer.tex:172: Missing $ inserted.
-<inserted text> 
-                $
-l.172 \end{frame}
-                 
-I've inserted something that you may have forgotten.
-(See the <inserted text> above.)
-With luck, this will get me unwedged. But if you
-really didn't forget anything, try typing `2' now; then
-my insertion and my current dilemma will both disappear.
-
-
-Overfull \hbox (549.39952pt too wide) in paragraph at lines 172--172
-[]\OT1/cmr/m/n/10 ; [][][][][][]([][][][][][][][][][][][][][][]\OML/cmm/m/it/10 ; [][][][][][][]; [][][][][][][][][][][]\OT1/cmr/m/n/10 )[]$  
- []
-
-
-Overfull \hbox (109.13536pt too wide) has occurred while \output is active
- [][]  \TU/lmss/m/n/6 ([])  
- []
-
-[11
-
-]
-Overfull \hbox (109.13536pt too wide) in paragraph at lines 192--192
- [][]  \TU/lmss/m/n/6 ([])  
- []
-
-File: img/context.png Graphic file (type bmp)
-<img/context.png>
-
-Overfull \vbox (133.54416pt too high) detected at line 192
- []
-
-
-Overfull \hbox (109.13536pt too wide) has occurred while \output is active
- [][]  \TU/lmss/m/n/6 ([])  
- []
-
-[12
-
-]
-Overfull \hbox (109.13536pt too wide) in paragraph at lines 200--200
- [][]  \TU/lmss/m/n/6 ([])  
- []
-
-File: img/gui.png Graphic file (type bmp)
-<img/gui.png>
-
-Overfull \hbox (109.13536pt too wide) has occurred while \output is active
- [][]  \TU/lmss/m/n/6 ([])  
- []
-
-[13
-
-]
-Overfull \hbox (109.13536pt too wide) in paragraph at lines 221--221
- [][]  \TU/lmss/m/n/6 ([])  
- []
-
-File: img/aih.png Graphic file (type bmp)
-<img/aih.png>
-
-Overfull \hbox (109.13536pt too wide) has occurred while \output is active
- [][]  \TU/lmss/m/n/6 ([])  
- []
-
-[14
-
-]
-Overfull \hbox (109.13536pt too wide) in paragraph at lines 238--238
- [][]  \TU/lmss/m/n/6 ([])  
- []
-
-File: img/manage.png Graphic file (type bmp)
-<img/manage.png>
-
-Overfull \hbox (109.13536pt too wide) has occurred while \output is active
- [][]  \TU/lmss/m/n/6 ([])  
- []
-
-[15
-
-]
-Overfull \hbox (109.13536pt too wide) in paragraph at lines 258--258
- [][]  \TU/lmss/m/n/6 ([])  
- []
-
-File: img/html.png Graphic file (type bmp)
-<img/html.png>
-File: img/json.png Graphic file (type bmp)
-<img/json.png>
-File: img/xml.png Graphic file (type bmp)
-<img/xml.png>
-
-Overfull \hbox (109.13536pt too wide) has occurred while \output is active
- [][]  \TU/lmss/m/n/6 ([])  
- []
-
-[16
-
-]
-Overfull \hbox (109.13536pt too wide) in paragraph at lines 280--280
- [][]  \TU/lmss/m/n/6 ([])  
- []
-
-
-Overfull \hbox (109.13536pt too wide) has occurred while \output is active
- [][]  \TU/lmss/m/n/6 ([])  
- []
-
-[17
-
-]
-Overfull \hbox (109.13536pt too wide) in paragraph at lines 298--298
- [][]  \TU/lmss/m/n/6 ([])  
- []
-
-
-Overfull \hbox (109.13536pt too wide) has occurred while \output is active
- [][]  \TU/lmss/m/n/6 ([])  
- []
-
-[18
-
-]
-Overfull \hbox (109.13536pt too wide) in paragraph at lines 308--308
- [][]  \TU/lmss/m/n/6 ([])  
- []
-
-
-Overfull \hbox (109.13536pt too wide) has occurred while \output is active
- [][]  \TU/lmss/m/n/6 ([])  
- []
-
-[19
-
-]
-Overfull \hbox (109.13536pt too wide) in paragraph at lines 315--315
- [][]  \TU/lmss/m/n/6 ([])  
- []
-
-
-Overfull \hbox (109.13536pt too wide) has occurred while \output is active
- [][]  \TU/lmss/m/n/6 ([])  
- []
-
-[20
 
 ]
 \tf@nav=\write6
@@ -1608,23 +1133,16 @@ Overfull \hbox (109.13536pt too wide) has occurred while \output is active
 LaTeX2e <2023-11-01> patch level 1
 L3 programming layer <2022/07/14>
  ***********
-
-
-Package rerunfilecheck Warning: File `beamer.out' has changed.
-(rerunfilecheck)                Rerun to get outlines right
-(rerunfilecheck)                or use package `bookmark'.
-
-Package rerunfilecheck Info: Checksums for `beamer.out':
-(rerunfilecheck)             Before: <no file>
-(rerunfilecheck)             After:  78F3043B9955FD55F574DF6CFFD8B974;367.
+Package rerunfilecheck Info: File `beamer.out' has not changed.
+(rerunfilecheck)             Checksum: F790EF82901F45AB300917215B55F96B;150.
  ) 
 Here is how much of TeX's memory you used:
- 30659 strings out of 474878
- 682283 string characters out of 5762516
- 1938627 words of memory out of 5000000
- 52073 multiletter control sequences out of 15000+600000
- 566770 words of font info for 109 fonts, out of 8000000 for 9000
+ 30342 strings out of 474878
+ 673405 string characters out of 5762516
+ 1936627 words of memory out of 5000000
+ 51781 multiletter control sequences out of 15000+600000
+ 564951 words of font info for 86 fonts, out of 8000000 for 9000
  1348 hyphenation exceptions out of 8191
- 128i,15n,123p,438b,783s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 128i,15n,123p,438b,606s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
-Output written on beamer.pdf (20 pages).
+Output written on beamer.pdf (5 pages).

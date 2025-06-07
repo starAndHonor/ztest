@@ -1,45 +1,48 @@
-\contentsline {section}{\numberline {1}System Requirements Analysis}{2}{section.1}%
-\contentsline {subsection}{\numberline {1.1}System Background and Motivation}{2}{subsection.1.1}%
-\contentsline {subsection}{\numberline {1.2}System Objectives}{2}{subsection.1.2}%
-\contentsline {subsubsection}{\numberline {1.2.1}Test Management}{2}{subsubsection.1.2.1}%
-\contentsline {subsubsection}{\numberline {1.2.2}Assertion Mechanism}{3}{subsubsection.1.2.2}%
-\contentsline {subsubsection}{\numberline {1.2.3}Data-Driven Testing}{4}{subsubsection.1.2.3}%
-\contentsline {subsubsection}{\numberline {1.2.4}Test Executor}{4}{subsubsection.1.2.4}%
-\contentsline {subsubsection}{\numberline {1.2.5}Report Generation}{4}{subsubsection.1.2.5}%
-\contentsline {subsubsection}{\numberline {1.2.6}CLI Interface}{5}{subsubsection.1.2.6}%
-\contentsline {subsubsection}{\numberline {1.2.7}GUI Display}{5}{subsubsection.1.2.7}%
-\contentsline {subsubsection}{\numberline {1.2.8}AI Intelligent Diagnosis Function}{6}{subsubsection.1.2.8}%
-\contentsline {section}{\numberline {2}Program Analysis}{7}{section.2}%
-\contentsline {subsection}{\numberline {2.1}Key System Issues}{7}{subsection.2.1}%
-\contentsline {subsubsection}{\numberline {2.1.1}Improving Test Execution Efficiency}{7}{subsubsection.2.1.1}%
-\contentsline {subsubsection}{\numberline {2.1.2}Syntax Sugar Implementation}{7}{subsubsection.2.1.2}%
-\contentsline {subsubsection}{\numberline {2.1.3}Automatic Type Inference of Functions to be Tested}{8}{subsubsection.2.1.3}%
-\contentsline {subsection}{\numberline {2.2}Responsibility Allocation}{8}{subsection.2.2}%
-\contentsline {section}{\numberline {3}Technical Approach}{8}{section.3}%
-\contentsline {subsection}{\numberline {3.1}Runtime Environment}{8}{subsection.3.1}%
-\contentsline {subsection}{\numberline {3.2}Overall Design}{9}{subsection.3.2}%
-\contentsline {subsubsection}{\numberline {3.2.1}Ztest Core Architecture Diagram}{9}{subsubsection.3.2.1}%
-\contentsline {subsubsection}{\numberline {3.2.2}GUI Framework}{10}{subsubsection.3.2.2}%
-\contentsline {subsubsection}{\numberline {3.2.3}Overall Class Diagram}{11}{subsubsection.3.2.3}%
-\contentsline {subsection}{\numberline {3.3}Detailed Design}{12}{subsection.3.3}%
-\contentsline {subsubsection}{\numberline {3.3.1}Test Definition Related Classes}{12}{subsubsection.3.3.1}%
-\contentsline {subsubsection}{\numberline {3.3.2}Test Registration Related Classes}{12}{subsubsection.3.3.2}%
-\contentsline {subsubsection}{\numberline {3.3.3}Test Execution Related Classes}{13}{subsubsection.3.3.3}%
-\contentsline {subsubsection}{\numberline {3.3.4}Data Management Related Classes}{13}{subsubsection.3.3.4}%
-\contentsline {subsubsection}{\numberline {3.3.5}Result Management Related Classes}{14}{subsubsection.3.3.5}%
-\contentsline {subsubsection}{\numberline {3.3.6}Report Generation Related Classes}{14}{subsubsection.3.3.6}%
-\contentsline {subsubsection}{\numberline {3.3.7}Utility Module Related Classes}{15}{subsubsection.3.3.7}%
-\contentsline {subsubsection}{\numberline {3.3.8}GUI Module Related Classes}{15}{subsubsection.3.3.8}%
-\contentsline {section}{\numberline {4}Programming Progress}{16}{section.4}%
-\contentsline {section}{\numberline {5}Test Report}{17}{section.5}%
-\contentsline {subsection}{\numberline {5.1}Function Testing \& System Testing}{17}{subsection.5.1}%
-\contentsline {subsubsection}{\numberline {5.1.1}Assertion Function Testing}{17}{subsubsection.5.1.1}%
-\contentsline {subsubsection}{\numberline {5.1.2}Test Management Testing}{18}{subsubsection.5.1.2}%
-\contentsline {subsubsection}{\numberline {5.1.3}Test Execution Management}{20}{subsubsection.5.1.3}%
-\contentsline {subsubsection}{\numberline {5.1.4}Data-Driven Testing}{21}{subsubsection.5.1.4}%
-\contentsline {subsubsection}{\numberline {5.1.5}Benchmark Testing}{22}{subsubsection.5.1.5}%
-\contentsline {subsubsection}{\numberline {5.1.6}Report Generation Testing}{23}{subsubsection.5.1.6}%
-\contentsline {subsubsection}{\numberline {5.1.7}GUI Testing}{24}{subsubsection.5.1.7}%
-\contentsline {subsubsection}{\numberline {5.1.8}AI Diagnosis Testing}{25}{subsubsection.5.1.8}%
-\contentsline {section}{\numberline {6}Personal Summaries}{27}{section.6}%
-\contentsline {section}{\numberline {7}References}{28}{section.7}%
+\contentsline {section}{\numberline {1}Abstract}{3}{section.1}%
+\contentsline {section}{\numberline {2}System Requirements Analysis}{3}{section.2}%
+\contentsline {subsection}{\numberline {2.1}System Background and Motivation}{3}{subsection.2.1}%
+\contentsline {subsection}{\numberline {2.2}System Objectives}{4}{subsection.2.2}%
+\contentsline {subsubsection}{\numberline {2.2.1}Test Management}{4}{subsubsection.2.2.1}%
+\contentsline {subsubsection}{\numberline {2.2.2}Assertion Mechanism}{5}{subsubsection.2.2.2}%
+\contentsline {subsubsection}{\numberline {2.2.3}Data-Driven Testing}{5}{subsubsection.2.2.3}%
+\contentsline {subsubsection}{\numberline {2.2.4}Test Executor}{6}{subsubsection.2.2.4}%
+\contentsline {subsubsection}{\numberline {2.2.5}Report Generation}{6}{subsubsection.2.2.5}%
+\contentsline {subsubsection}{\numberline {2.2.6}CLI Interface}{7}{subsubsection.2.2.6}%
+\contentsline {subsubsection}{\numberline {2.2.7}GUI Display}{7}{subsubsection.2.2.7}%
+\contentsline {subsubsection}{\numberline {2.2.8}AI Intelligent Diagnosis Function}{7}{subsubsection.2.2.8}%
+\contentsline {section}{\numberline {3}Program Analysis}{9}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Key System Issues}{9}{subsection.3.1}%
+\contentsline {subsubsection}{\numberline {3.1.1}Excellent Architectural Design}{9}{subsubsection.3.1.1}%
+\contentsline {subsubsection}{\numberline {3.1.2}Application of Programming Design Ideas}{9}{subsubsection.3.1.2}%
+\contentsline {subsubsection}{\numberline {3.1.3}Improving Test Execution Efficiency}{9}{subsubsection.3.1.3}%
+\contentsline {subsubsection}{\numberline {3.1.4}Implementation of Syntactic Sugar}{10}{subsubsection.3.1.4}%
+\contentsline {subsubsection}{\numberline {3.1.5}Automatic Type Inference for Functions to Be Tested}{10}{subsubsection.3.1.5}%
+\contentsline {subsection}{\numberline {3.2}Responsibilities Allocation}{10}{subsection.3.2}%
+\contentsline {section}{\numberline {4}Technical Approach}{11}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Operating Environment}{11}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Overall Design}{11}{subsection.4.2}%
+\contentsline {subsubsection}{\numberline {4.2.1}Ztest Core Architecture Diagram}{11}{subsubsection.4.2.1}%
+\contentsline {subsubsection}{\numberline {4.2.2}GUI Framework}{12}{subsubsection.4.2.2}%
+\contentsline {subsubsection}{\numberline {4.2.3}Overall Class Diagram}{13}{subsubsection.4.2.3}%
+\contentsline {subsection}{\numberline {4.3}Detailed Design}{14}{subsection.4.3}%
+\contentsline {subsubsection}{\numberline {4.3.1}Test Definition Related Classes}{14}{subsubsection.4.3.1}%
+\contentsline {subsubsection}{\numberline {4.3.2}Test Registration Related Classes}{14}{subsubsection.4.3.2}%
+\contentsline {subsubsection}{\numberline {4.3.3}Test Execution Related Classes}{15}{subsubsection.4.3.3}%
+\contentsline {subsubsection}{\numberline {4.3.4}Data Management Related Classes}{15}{subsubsection.4.3.4}%
+\contentsline {subsubsection}{\numberline {4.3.5}Result Management Related Classes}{16}{subsubsection.4.3.5}%
+\contentsline {subsubsection}{\numberline {4.3.6}Report Generation Related Classes}{16}{subsubsection.4.3.6}%
+\contentsline {subsubsection}{\numberline {4.3.7}Utility Module Related Classes}{17}{subsubsection.4.3.7}%
+\contentsline {subsubsection}{\numberline {4.3.8}GUI Module Related Classes}{17}{subsubsection.4.3.8}%
+\contentsline {section}{\numberline {5}Programming Progress}{19}{section.5}%
+\contentsline {section}{\numberline {6}Test Report}{20}{section.6}%
+\contentsline {subsection}{\numberline {6.1}Functional Testing \& System Testing}{20}{subsection.6.1}%
+\contentsline {subsubsection}{\numberline {6.1.1}Assertion Function Testing}{20}{subsubsection.6.1.1}%
+\contentsline {subsubsection}{\numberline {6.1.2}Test Management Testing}{21}{subsubsection.6.1.2}%
+\contentsline {subsubsection}{\numberline {6.1.3}Test Execution Management}{23}{subsubsection.6.1.3}%
+\contentsline {subsubsection}{\numberline {6.1.4}Data-Driven Testing}{24}{subsubsection.6.1.4}%
+\contentsline {subsubsection}{\numberline {6.1.5}Benchmark Testing}{25}{subsubsection.6.1.5}%
+\contentsline {subsubsection}{\numberline {6.1.6}Report Generation Testing}{26}{subsubsection.6.1.6}%
+\contentsline {subsubsection}{\numberline {6.1.7}GUI Testing}{27}{subsubsection.6.1.7}%
+\contentsline {subsubsection}{\numberline {6.1.8}AI Diagnosis Testing}{28}{subsubsection.6.1.8}%
+\contentsline {section}{\numberline {7}Personal Summary}{29}{section.7}%
+\contentsline {section}{\numberline {8}References}{29}{section.8}%
