@@ -1,7 +1,0 @@
-\frametitle{动态注册测试用例}
-\begin{lstlisting}[language=C++]
-ZTEST_F(MathTests, NegativeNumbers) {
-    ASSERT_TRUE(add(-2, -3) == -5); // 断言结果为-5
-    return Zstate::Z_SUCCESS;
-}
-    \end{lstlisting}
