@@ -1,11 +1,5 @@
-<!--
- * @Author: starAndHonor 13750616920@163.com
- * @Date: 2025-06-06 21:26:02
- * @LastEditors: starAndHonor 13750616920@163.com
- * @LastEditTime: 2025-06-06 21:37:32
- * @FilePath: /ztest/README.md
- * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
--->
+
+
 # Official Statement: 
 1. This project must be compiled on a Linux system
 2.  requiring the use of C++20.
@@ -18,10 +12,10 @@
   ```
   curl -fsSL https://xmake.io/shget.text | bash
   ```
-## Quick start:
+### Build and Run:
 ```
-    xmake
-    xmake r
+xmake
+xmake r
 ```
 
   ## Dependencies
@@ -53,4 +47,6 @@ Existing unit testing frameworks, such as Google Test, have several drawbacks, i
 * Test Cases Management 
 * Assertation
 * Result Reporting with AI
+* Native Parrallel Running Context with Thread Pool
 * Data-Driven Testing with Data Monitoring
+* BENCHMARK TESTING
